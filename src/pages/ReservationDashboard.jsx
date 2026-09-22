@@ -233,20 +233,18 @@ function QrModal({ reservation, onClose }) {
         </div>
 
         {payload && (
-          <div className="bg-black/60 rounded-2xl p-3.5 border border-white/10 text-left">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Cryptographic Token</span>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors"
-              >
-                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                {copied ? 'Copied' : 'Copy Payload'}
-              </button>
+          <div className="bg-black/60 rounded-2xl p-3 border border-white/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span className="text-xs font-semibold text-slate-300">Cryptographically Signed &amp; Verified</span>
             </div>
-            <pre className="text-[10px] text-slate-300 font-mono overflow-x-auto max-h-24 p-2 bg-black/40 rounded-xl">
-              {payload}
-            </pre>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors bg-white/5 px-2.5 py-1 rounded-full"
+            >
+              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+              {copied ? 'Copied' : 'Copy Token'}
+            </button>
           </div>
         )}
 
