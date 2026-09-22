@@ -1,8 +1,11 @@
 import axios from 'axios';
 
+// Resolve backend API URL (Default to port 5298 for C# Web API)
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5298/api';
+
 // Create an Axios instance configured for the C# Web API backend
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -27,13 +30,12 @@ api.interceptors.request.use(
   }
 );
 
-// Response Interceptor: Optional error handling (e.g., handling expired tokens / 401s)
+// Response Interceptor: Global response error handling
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
-    // You can handle global response errors here (like redirecting on 401 Unauthorized)
     return Promise.reject(error);
   }
 );
