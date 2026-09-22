@@ -1,41 +1,25 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-import axios from 'axios';
+import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
+import api from '../services/api';
 import ReservationRow from '../components/ReservationRow';
 import emptyStateSvg from '../assets/images/empty-state.svg';
-import { RefreshCw } from 'lucide-react';
-import bgSolar from '../assets/images/bg-solar.jpg';
 import solarGridVideo from '../assets/images/Solar Grid.mp4';
-
-const api = axios.create({
-  baseURL: 'http://localhost:5298/api',
-  headers: { 'Content-Type': 'application/json' },
-});
-
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
 
 function SkeletonRow({ index }) {
   return (
     <motion.tr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ delay: index * 0.05 }}
+      transition={{ delay: index * 0.04 }}
       className="border-b border-white/5"
     >
-      {[...Array(7)].map((_, i) => (
-        <td key={i} className="px-5 py-4">
+      {[...Array(8)].map((_, i) => (
+        <td key={i} className="px-6 py-4">
           <div
-            className="h-4 rounded-md bg-gradient-to-r from-white/5 via-white/10 to-white/5"
-            style={{
-              width: ['80px', '120px', '70px', '90px', '100px', '80px', '130px'][i],
-              backgroundSize: '200% 100%',
-              animation: 'shimmer 2s linear infinite',
-            }}
+            className="h-4 rounded-md bg-gradient-to-r from-white/5 via-white/10 to-white/5 animate-pulse"
+            style={{ width: ['70px', '110px', '80px', '75px', '90px', '90px', '80px', '110px'][i] }}
           />
         </td>
       ))}
@@ -49,28 +33,23 @@ function EmptyState({ filter }) {
     <motion.div
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      className="flex flex-col items-center justify-center py-16 px-8 text-center"
+      transition={{ duration: 0.35 }}
+      className="flex flex-col items-center justify-center py-20 px-8 text-center"
     >
-      <motion.div
-        initial={{ y: -8 }}
-        animate={{ y: 8 }}
-        transition={{ repeat: Infinity, repeatType: 'reverse', duration: 3, ease: 'easeInOut' }}
-        className="mb-6 max-w-xs w-60"
-      >
+      <div className="mb-6 max-w-xs w-48 opacity-85">
         <img
           src={emptyStateSvg}
           alt="No reservations"
-          className="w-full h-auto drop-shadow-[0_15px_30px_rgba(245,158,11,0.12)]"
+          className="w-full h-auto drop-shadow-[0_15px_30px_rgba(255,208,0,0.15)]"
         />
-      </motion.div>
-      <h3 className="text-xl font-bold text-slate-200 mb-2 tracking-wide">
-        {isFiltered ? `No ${filter} Reservations` : 'Grid Queue Empty'}
+      </div>
+      <h3 className="text-xl font-bold text-slate-100 mb-2 tracking-tight">
+        {isFiltered ? `No ${filter} Reservations` : 'Grid Dispatch Queue Empty'}
       </h3>
-      <p className="text-slate-500 max-w-sm mx-auto text-sm">
+      <p className="text-slate-400 max-w-md mx-auto text-xs leading-relaxed">
         {isFiltered
-          ? `There are currently no reservations with '${filter}' status.`
-          : 'All grid nodes are operating optimally. There are no pending operations.'}
+          ? `There are currently no energy slot reservations with '${filter}' status.`
+          : 'All microgrid nodes are operating nominally. No active reservation entries in queue.'}
       </p>
     </motion.div>
   );
@@ -78,39 +57,81 @@ function EmptyState({ filter }) {
 
 function ErrorState({ message, onRetry }) {
   return (
-    <div className="flex flex-col items-center justify-center py-12 px-6 text-center">
-      <div className="w-12 h-12 bg-red-500/10 text-red-400 rounded-full flex items-center justify-center mb-3 border border-red-500/20">
-        <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
+    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
+      <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center mb-3 border border-red-500/20 shadow-inner">
+        <AlertCircle className="w-7 h-7" />
       </div>
-      <p className="text-red-300 font-semibold text-sm mb-4">{message}</p>
-      <button onClick={onRetry} className="px-5 py-2 bg-white/5 hover:bg-white/10 text-white text-sm font-semibold rounded-lg border border-white/10 transition-colors">
+      <p className="text-red-300 font-bold text-sm mb-1">{message}</p>
+      <p className="text-slate-400 text-xs mb-5">Ensure Central Microgrid API is active on port 5298 and database is connected.</p>
+      <button
+        onClick={onRetry}
+        className="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-full border border-white/15 transition-all shadow-md"
+      >
         Retry Connection
       </button>
     </div>
   );
 }
 
-function StatCard({ label, value, gradient, icon, delay }) {
+function StatCard({ label, value, theme, icon, delay, subtitle }) {
+  let cardClass = '';
+  let valueClass = '';
+  let labelClass = '';
+  let subClass = '';
+  let iconClass = '';
+
+  if (theme === 'yellow') {
+    cardClass = 'bg-[#FFD000] text-[#0A0A0C] border-none shadow-xl shadow-[#FFD000]/15';
+    valueClass = 'text-[#0A0A0C]';
+    labelClass = 'text-[#0A0A0C]/80';
+    subClass = 'text-[#0A0A0C]/70';
+    iconClass = 'bg-black/10 text-[#0A0A0C]';
+  } else if (theme === 'cream') {
+    cardClass = 'bg-[#F8F7F0] text-[#0A0A0C] border-none shadow-xl shadow-black/30';
+    valueClass = 'text-[#0A0A0C]';
+    labelClass = 'text-[#0A0A0C]/80';
+    subClass = 'text-[#0A0A0C]/70';
+    iconClass = 'bg-black/10 text-[#0A0A0C]';
+  } else if (theme === 'dark-emerald') {
+    cardClass = 'bg-[#121318] text-white border border-emerald-500/30 shadow-lg';
+    valueClass = 'text-emerald-400';
+    labelClass = 'text-slate-400';
+    subClass = 'text-emerald-500/70';
+    iconClass = 'bg-emerald-500/10 text-emerald-400';
+  } else if (theme === 'dark-amber') {
+    cardClass = 'bg-[#121318] text-white border border-[#FFD000]/30 shadow-lg';
+    valueClass = 'text-[#FFD000]';
+    labelClass = 'text-slate-400';
+    subClass = 'text-[#FFD000]/70';
+    iconClass = 'bg-[#FFD000]/10 text-[#FFD000]';
+  } else {
+    cardClass = 'bg-[#121318] text-white border border-rose-500/20 shadow-lg';
+    valueClass = 'text-rose-400';
+    labelClass = 'text-slate-400';
+    subClass = 'text-rose-400/70';
+    iconClass = 'bg-rose-500/10 text-rose-400';
+  }
+
   return (
-    <div style={{ filter: 'drop-shadow(0 4px 6px rgba(0,0,0,0.1))' }}>
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay, duration: 0.4, ease: "easeOut" }}
-        className={`p-6 pr-10 flex items-center gap-5 ${gradient}`}
-        style={{ clipPath: 'polygon(0% 0%, 85% 0%, 100% 50%, 85% 100%, 0% 100%)' }}
-      >
-        <div className="w-12 h-12 rounded-full flex items-center justify-center bg-white/40 text-slate-900 shadow-inner">
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, duration: 0.35, ease: 'easeOut' }}
+      className={`relative p-5 rounded-3xl transition-all duration-300 hover:-translate-y-1 ${cardClass}`}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <p className={`text-3xl font-black tracking-tight leading-none ${valueClass}`}>{value}</p>
+          <p className={`text-[11px] tracking-wider uppercase mt-2 font-bold ${labelClass}`}>{label}</p>
+          {subtitle && (
+            <p className={`text-[10px] font-medium mt-0.5 ${subClass}`}>{subtitle}</p>
+          )}
+        </div>
+        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${iconClass}`}>
           {icon}
         </div>
-        <div>
-          <p className="text-3xl font-extrabold text-slate-900 tracking-tight leading-none">{value}</p>
-          <p className="text-[11px] text-slate-900 tracking-widest uppercase mt-1.5 font-bold drop-shadow-sm">{label}</p>
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 }
 
@@ -118,64 +139,220 @@ function FilterPill({ label, active, count, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`relative px-4 py-1.5 rounded-full text-xs font-bold tracking-wide transition-all duration-300 ${
-        active ? 'text-white bg-solar-500 shadow-md shadow-solar-500/20' : 'text-slate-400 hover:text-slate-200'
+      className={`relative px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all duration-200 ${
+        active
+          ? 'text-[#0A0A0C] bg-[#FFD000] shadow-md shadow-[#FFD000]/25'
+          : 'text-slate-400 hover:text-slate-200 bg-white/[0.04] border border-white/5'
       }`}
     >
       {label}
-      <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] ${
-        active ? 'bg-white/20' : 'bg-white/5'
-      }`}>
+      <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${active ? 'bg-black/15 text-[#0A0A0C]' : 'bg-white/10 text-slate-400'}`}>
         {count}
       </span>
     </button>
   );
 }
 
-const TABLE_HEADERS = ['Reservation ID', 'Prosumer NIC', 'Node ID', 'Capacity (kW)', 'Start Time', 'End Time', 'Status', 'Actions'];
+// ─── QR Code Modal ────────────────────────────────────────────────────────────
+function QrModal({ reservation, onClose }) {
+  const [copied, setCopied] = useState(false);
+  if (!reservation) return null;
+
+  const isApproved = String(reservation.status || '').toLowerCase() === 'approved';
+  const payload = reservation.qrPayload || (isApproved ? JSON.stringify({
+    type: "SOLAR_MICROGRID_DISPATCH_QR",
+    version: "1.0",
+    reservationId: reservation.id ?? reservation.reservationId,
+    prosumerId: reservation.prosumerNic ?? reservation.prosumerId,
+    nodeId: reservation.nodeId,
+    reservationDate: reservation.reservationDate,
+    status: "Approved",
+    issuedAt: new Date().toISOString(),
+    securityToken: "APPROVED_DISPATCH"
+  }) : null);
+
+  const qrImageUrl = payload
+    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`
+    : null;
+
+  const handleCopy = () => {
+    if (!payload) return;
+    navigator.clipboard.writeText(payload);
+    setCopied(true);
+    toast.success('QR payload copied to clipboard');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.94 }}
+        className="bg-[#101116] border border-[#FFD000]/30 rounded-3xl p-6 max-w-md w-full shadow-2xl relative text-slate-100"
+      >
+        <div className="flex items-center justify-between pb-4 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-[#FFD000]/15 text-[#FFD000] flex items-center justify-center border border-[#FFD000]/30">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold tracking-tight text-white">Dispatch QR Pass</h3>
+              <p className="text-[11px] text-slate-400">Scan at microgrid station to verify dispatch pass</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <div className="my-6 flex flex-col items-center">
+          {qrImageUrl ? (
+            <>
+              <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-[#FFD000]">
+                <img src={qrImageUrl} alt="Dispatch QR Pass" className="w-48 h-48 rounded-lg" />
+              </div>
+              <p className="mt-3.5 text-xs font-mono text-[#FFD000] font-bold tracking-wider">
+                #{String(reservation.id ?? reservation.reservationId).slice(-8).toUpperCase()}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Prosumer: <span className="text-slate-200 font-semibold">{reservation.prosumerNic ?? reservation.prosumerId}</span>
+              </p>
+            </>
+          ) : (
+            <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
+              <p className="text-red-400 text-sm font-bold">QR Payload Not Available</p>
+              <p className="text-slate-400 text-xs mt-1">
+                This reservation has not been granted an authentic server dispatch token.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {payload && (
+          <div className="bg-black/60 rounded-2xl p-3.5 border border-white/10 text-left">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Cryptographic Token</span>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copied' : 'Copy Payload'}
+              </button>
+            </div>
+            <pre className="text-[10px] text-slate-300 font-mono overflow-x-auto max-h-24 p-2 bg-black/40 rounded-xl">
+              {payload}
+            </pre>
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-[#0A0A0C] font-black text-xs tracking-wider uppercase shadow-lg shadow-[#FFD000]/20 transition-all"
+          >
+            Close Viewer
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+const TABLE_HEADERS = [
+  'Reservation ID',
+  'Prosumer NIC',
+  'Node ID',
+  'Capacity (kW)',
+  'Start Time',
+  'End Time',
+  'Status',
+  'Actions',
+];
 
 export default function ReservationDashboard() {
   const [reservations, setReservations] = useState([]);
+  const [stats, setStats] = useState({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    cancelled: 0,
+    approvedFutureReservations: 0,
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filter, setFilter] = useState('All');
   const [search, setSearch] = useState('');
   const [loadingId, setLoadingId] = useState(null);
+  const [selectedQrReservation, setSelectedQrReservation] = useState(null);
 
-  const fetchReservations = useCallback(async () => {
+  const fetchReservationsAndStats = useCallback(async () => {
     try {
       setLoading(true);
       setError('');
-      const response = await api.get('/Reservation');
-      const data = response.data.map(item => ({
-        id: item.id ?? item.reservationId,
-        ...item
-      }));
-      setReservations(data);
+
+      const [reservationsRes, statsRes] = await Promise.allSettled([
+        api.get('/reservations'),
+        api.get('/reservations/stats'),
+      ]);
+
+      if (reservationsRes.status === 'fulfilled') {
+        const data = (reservationsRes.value.data || []).map((item) => ({
+          id: item.id ?? item.reservationId,
+          ...item,
+        }));
+        setReservations(data);
+
+        if (statsRes.status !== 'fulfilled') {
+          const now = new Date();
+          const total = data.length;
+          const pending = data.filter((r) => !r.status || r.status === 'Pending').length;
+          const approved = data.filter((r) => r.status === 'Approved').length;
+          const rejected = data.filter((r) => r.status === 'Rejected').length;
+          const cancelled = data.filter((r) => r.status === 'Cancelled').length;
+          const approvedFutureReservations = data.filter(
+            (r) => r.status === 'Approved' && new Date(r.startTime) > now
+          ).length;
+
+          setStats({ total, pending, approved, rejected, cancelled, approvedFutureReservations });
+        }
+      } else {
+        throw reservationsRes.reason;
+      }
+
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value.data);
+      }
     } catch (err) {
       console.error('Fetch error:', err);
-      setError('Unable to reach the grid server.');
-      toast.error('Connection failed');
+      setError('Unable to reach the Solar Microgrid API (Port 5298).');
+      toast.error('Failed to load reservations.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchReservations();
-  }, [fetchReservations]);
+    fetchReservationsAndStats();
+  }, [fetchReservationsAndStats]);
 
-  const handleStatusUpdate = async (id, status, action) => {
+  const handleStatusUpdate = async (id, status, actionEndpoint) => {
     setLoadingId(id);
     try {
-      await api.put(`/Reservation/${id}/${action}`);
-      setReservations(prev => prev.map(res =>
-        res.id === id ? { ...res, status: status } : res
-      ));
-      toast.success(`Reservation ${status}`, { icon: status === 'Approved' ? '?' : '?' });
+      await api.put(`/reservations/${id}/${actionEndpoint}`);
+      toast.success(`Reservation ${status}!`, {
+        icon: status === 'Approved' ? '✅' : '❌',
+      });
+      await fetchReservationsAndStats();
     } catch (err) {
+      const msg = err.response?.data?.message || 'Failed to update reservation status';
       console.error('Update error:', err);
-      toast.error('Failed to update status');
+      toast.error(msg);
     } finally {
       setLoadingId(null);
     }
@@ -184,120 +361,202 @@ export default function ReservationDashboard() {
   const handleApprove = (id) => handleStatusUpdate(id, 'Approved', 'approve');
   const handleReject = (id) => handleStatusUpdate(id, 'Rejected', 'reject');
 
-  const filtered = reservations.filter(res => {
-    const matchesFilter = filter === 'All' || res.status === filter || (!res.status && filter === 'Pending');
+  const handleCancel = async (id) => {
+    if (!window.confirm('Are you sure you want to cancel this reservation?')) {
+      return;
+    }
+
+    setLoadingId(id);
+    try {
+      await api.put(`/reservations/${id}/cancel`, { reason: 'Operator cancelled upon request' });
+      toast.success('Reservation cancelled successfully');
+      await fetchReservationsAndStats();
+    } catch (err) {
+      const msg = err.response?.data?.message || 'Cancellation failed.';
+      toast.error(msg, { duration: 5000 });
+    } finally {
+      setLoadingId(null);
+    }
+  };
+
+  const filtered = reservations.filter((res) => {
+    const resStatus = res.status ?? 'Pending';
+    const matchesFilter = filter === 'All' || resStatus.toLowerCase() === filter.toLowerCase();
     const searchTerm = search.toLowerCase();
-    const matchesSearch =
-      (res.prosumerId?.toLowerCase().includes(searchTerm)) ||
-      (res.nodeId?.toLowerCase().includes(searchTerm)) ||
-      (res.id?.toLowerCase().includes(searchTerm));
-    return matchesFilter && matchesSearch;
+    const prosumer = (res.prosumerNic ?? res.prosumerId ?? res.consumerId ?? '').toLowerCase();
+    const node = (res.nodeId ?? res.microgridNodeId ?? '').toLowerCase();
+    const id = String(res.id ?? res.reservationId ?? '').toLowerCase();
+
+    return matchesFilter && (prosumer.includes(searchTerm) || node.includes(searchTerm) || id.includes(searchTerm));
   });
 
-  const total = reservations.length;
-  const pending = reservations.filter(r => r.status === 'Pending' || !r.status).length;
-  const approved = reservations.filter(r => r.status === 'Approved').length;
-  const rejected = reservations.filter(r => r.status === 'Rejected').length;
-
   return (
-    <div className="dashboard-container text-white min-h-screen" style={{ backgroundImage: `linear-gradient(rgba(15,23,42,0.85), rgba(15,23,42,0.9)), url(${bgSolar})`, backgroundSize: 'cover', backgroundAttachment: 'fixed', backgroundPosition: 'center' }}>
-      <Toaster position="top-right" toastOptions={{ className: 'font-sans font-semibold text-sm rounded-xl bg-slate-800 text-white border border-slate-700' }} />
+    <div className="dashboard-container text-white min-h-screen">
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          className: 'font-sans font-semibold text-sm rounded-2xl bg-[#16171E] text-white border border-white/10',
+        }}
+      />
 
-      <main className="max-w-7xl mx-auto px-6 py-10">
-        
-        {/* SKETCH LAYOUT: Grid Operator & Refresh Button */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <div className="flex items-center gap-4">
-  <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-slate-700 shadow-lg shadow-black/50">
-    <video src={solarGridVideo} autoPlay loop muted playsInline className="w-full h-full object-cover opacity-90" />
-  </div>
-  <h1 className="text-3xl font-bold text-slate-100 tracking-tight leading-none">
-    Grid Operator
-  </h1>
-</div>
-          </div>
-          
-          <button
-            onClick={fetchReservations}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-semibold transition-all disabled:opacity-50"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
-        </div>
-
-        {/* SKETCH LAYOUT: 4 Stat Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-8">
-          <StatCard
-            label="Total"
-            value={loading ? '-' : total}
-            gradient="bg-gradient-to-r from-blue-200 to-blue-400"
-            delay={0}
-            icon={<svg className="w-5 h-5 animate-float" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>}
-          />
-          <StatCard
-            label="Pending"
-            value={loading ? '-' : pending}
-            gradient="bg-gradient-to-r from-amber-200 to-amber-400"
-            delay={0.06}
-            icon={<svg className="w-5 h-5 animate-pulse-glow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-          />
-          <StatCard
-            label="Approved"
-            value={loading ? '-' : approved}
-            gradient="bg-gradient-to-r from-emerald-200 to-emerald-400"
-            delay={0.12}
-            icon={<svg className="w-5 h-5 animate-float" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-          />
-          <StatCard
-            label="Rejected"
-            value={loading ? '-' : rejected}
-            gradient="bg-gradient-to-r from-red-200 to-rose-400"
-            delay={0.18}
-            icon={<svg className="w-5 h-5 animate-pulse-glow" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}
-          />
-        </div>
-
-        {/* Existing Table Code Intact */}
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.22, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="glass-card overflow-hidden bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/10"
-        >
-          <div className="px-6 py-5 border-b border-white/5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <main className="max-w-7xl mx-auto px-6 sm:px-8 py-10">
+        {/* Header Bar */}
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 mb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative">
+              <video src={solarGridVideo} autoPlay loop muted playsInline className="w-full h-full object-cover" />
+            </div>
             <div>
-              <h2 className="text-base font-bold text-slate-100 tracking-tight leading-none">
-                Reservation Queue
-              </h2>
-              <p className="text-xs text-slate-500 tracking-wide mt-1">
-                Showing <span className="text-slate-300 font-semibold">{filtered.length}</span> of <span className="text-slate-300 font-semibold">{total}</span> reservations
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-3xl font-black text-white tracking-tight leading-none">
+                  Grid Operator Portal
+                </h1>
+                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[10px] font-bold uppercase tracking-wider">
+                  <ShieldCheck className="w-3 h-3" />
+                  Live Operator
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 tracking-wide mt-1.5">
+                Smart Solar Microgrid Energy Slot Reservation &amp; Dispatch Control Center
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="relative">
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              API Connected (5298)
+            </div>
+            <button
+              onClick={fetchReservationsAndStats}
+              disabled={loading}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all disabled:opacity-50 shadow-md"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
+        </div>
+
+        {/* 5 Stat Cards - Yellow & Black High Contrast Theme */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
+          {/* Card 1: Total Bookings (Cream Contrast Card) */}
+          <StatCard
+            label="Total Bookings"
+            value={loading ? '…' : stats.total}
+            theme="cream"
+            delay={0}
+            icon={
+              <svg className="w-5 h-5 text-[#0A0A0C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            }
+          />
+
+          {/* Card 2: Pending Action (Electric Yellow Highlight Card) */}
+          <StatCard
+            label="Pending Action"
+            value={loading ? '…' : stats.pending}
+            theme="yellow"
+            delay={0.05}
+            icon={
+              <svg className="w-5 h-5 text-[#0A0A0C] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
+
+          {/* Card 3: Approved (Dark Obsidian Emerald) */}
+          <StatCard
+            label="Approved"
+            value={loading ? '…' : stats.approved}
+            theme="dark-emerald"
+            delay={0.1}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
+
+          {/* Card 4: Approved Future (Dark Obsidian Yellow) */}
+          <StatCard
+            label="Approved Future"
+            value={loading ? '…' : stats.approvedFutureReservations}
+            theme="dark-amber"
+            delay={0.15}
+            subtitle="Scheduled ahead"
+            icon={<Calendar className="w-5 h-5 text-[#FFD000]" />}
+          />
+
+          {/* Card 5: Cancelled / Rejected (Dark Obsidian Rose) */}
+          <StatCard
+            label="Cancelled / Rejected"
+            value={loading ? '…' : (stats.rejected + stats.cancelled)}
+            theme="dark-rose"
+            delay={0.2}
+            icon={
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            }
+          />
+        </div>
+
+        {/* Main Table Container */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2, duration: 0.4 }}
+          className="glass-card overflow-hidden rounded-3xl"
+        >
+          {/* Controls Bar */}
+          <div className="px-6 sm:px-8 py-6 border-b border-white/[0.06] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-white tracking-tight leading-none">
+                Energy Slot Reservation Queue
+              </h2>
+              <p className="text-xs text-slate-400 tracking-wide mt-1.5">
+                Showing <span className="text-[#FFD000] font-bold">{filtered.length}</span> of <span className="text-white font-bold">{reservations.length}</span> live records
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              {/* Search input */}
+              <div className="relative flex-1 sm:flex-initial">
+                <svg
+                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
                 <input
                   type="text"
-                  placeholder="Search consumer, zone..."
+                  placeholder="Search NIC, Node, ID..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="pl-8 pr-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/30 tracking-wide w-52 transition-all"
+                  className="pl-10 pr-4 py-2 rounded-full bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 tracking-wide w-full sm:w-60 transition-all"
                 />
               </div>
-              <div className="flex items-center gap-1.5">
-                {['All', 'Pending', 'Approved', 'Rejected'].map((f) => {
-                  const counts = { All: total, Pending: pending, Approved: approved, Rejected: rejected };
+
+              {/* Filter Pills */}
+              <div className="flex items-center gap-1.5 overflow-x-auto py-1">
+                {['All', 'Pending', 'Approved', 'Cancelled', 'Rejected'].map((f) => {
+                  const counts = {
+                    All: reservations.length,
+                    Pending: stats.pending,
+                    Approved: stats.approved,
+                    Cancelled: stats.cancelled,
+                    Rejected: stats.rejected,
+                  };
                   return (
                     <FilterPill
                       key={f}
                       label={f}
                       active={filter === f}
-                      count={counts[f]}
+                      count={counts[f] ?? 0}
                       onClick={() => setFilter(f)}
                     />
                   );
@@ -306,17 +565,18 @@ export default function ReservationDashboard() {
             </div>
           </div>
 
+          {/* Table */}
           <div className="overflow-x-auto">
             {error ? (
-              <ErrorState message={error} onRetry={fetchReservations} />
+              <ErrorState message={error} onRetry={fetchReservationsAndStats} />
             ) : (
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-white/5 bg-white/5">
+                  <tr className="border-b border-white/[0.06] bg-white/[0.02]">
                     {TABLE_HEADERS.map((h) => (
                       <th
                         key={h}
-                        className="px-5 py-3 text-xs font-semibold text-slate-400 tracking-widest uppercase"
+                        className="px-6 py-4 text-[11px] font-black text-slate-400 tracking-wider uppercase"
                       >
                         {h}
                       </th>
@@ -341,6 +601,8 @@ export default function ReservationDashboard() {
                             reservation={reservation}
                             onApprove={handleApprove}
                             onReject={handleReject}
+                            onCancel={handleCancel}
+                            onViewQr={(res) => setSelectedQrReservation(res)}
                             loadingId={loadingId}
                             index={i}
                           />
@@ -354,11 +616,16 @@ export default function ReservationDashboard() {
           </div>
         </motion.div>
       </main>
+
+      {/* QR Code Modal for Approved Bookings */}
+      <AnimatePresence>
+        {selectedQrReservation && (
+          <QrModal
+            reservation={selectedQrReservation}
+            onClose={() => setSelectedQrReservation(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
-
-
-
-
-
