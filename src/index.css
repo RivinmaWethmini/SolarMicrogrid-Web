@@ -6,93 +6,182 @@
 
 @layer base {
   :root {
-    --brand-emerald: #10b981;
-    --brand-emerald-hover: #059669;
-    --text-main: #1e293b; /* slate-800 */
-    --text-muted: #64748b; /* slate-500 */
-    --bg-main: #f8fafc; /* slate-50 */
-    --card-bg: #ffffff;
-    --border-color: #f1f5f9; /* slate-100 */
-    
-    --sans: 'Outfit', system-ui, sans-serif;
+    font-family: 'Outfit', system-ui, sans-serif;
+    color: #1e293b;
+    background: #f8fafc;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    min-width: 320px;
+    min-height: 100%;
+    background: #f8fafc;
   }
 
   body {
+    min-width: 320px;
+    min-height: 100vh;
     margin: 0;
-    font-family: var(--sans);
-    color: var(--text-main);
-    background-color: var(--bg-main);
+    background: #f8fafc;
+    color: #1e293b;
     -webkit-font-smoothing: antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--sans);
-    color: var(--text-main);
-    letter-spacing: -0.02em;
+  button,
+  input {
+    font: inherit;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  button:disabled {
+    cursor: not-allowed;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    color: #0f172a;
   }
 }
 
 @layer components {
-  .dashboard-container {
-    @apply min-h-screen font-sans bg-slate-50;
+  .node-card {
+    @apply rounded-2xl border border-slate-200 bg-white;
+    box-shadow: 0 10px 35px -15px rgba(15, 23, 42, 0.18);
   }
 
-  .glass-card {
-    @apply bg-white rounded-3xl border border-slate-100;
-    box-shadow: 0 10px 40px -10px rgba(0,0,0,0.04);
-    transition: all 0.3s ease;
+  .summary-card {
+    @apply flex min-h-28 flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5;
+    box-shadow: 0 8px 30px -18px rgba(15, 23, 42, 0.2);
   }
 
-  .glass-card:hover {
-    box-shadow: 0 20px 40px -10px rgba(0,0,0,0.08);
-    transform: translateY(-2px);
+  .summary-label {
+    @apply text-xs font-bold uppercase tracking-wider text-slate-500;
+  }
+
+  .summary-number {
+    @apply mt-3 text-3xl font-extrabold;
+  }
+
+  .node-input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-none transition;
+  }
+
+  .node-input::placeholder {
+    @apply text-slate-400;
+  }
+
+  .node-input:hover {
+    @apply border-slate-400;
+  }
+
+  .node-input:focus {
+    @apply border-emerald-500 ring-4 ring-emerald-500/10;
+  }
+
+  .primary-btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-600 bg-emerald-600 px-5 py-2.5 text-sm font-bold text-white transition disabled:opacity-50;
+    box-shadow: 0 8px 18px -8px rgba(5, 150, 105, 0.6);
+  }
+
+  .primary-btn:hover:not(:disabled) {
+    @apply -translate-y-0.5 bg-emerald-700;
+  }
+
+  .secondary-btn {
+    @apply inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-5 py-2.5 text-sm font-bold text-slate-700 transition disabled:opacity-50;
+  }
+
+  .secondary-btn:hover:not(:disabled) {
+    @apply -translate-y-0.5 border-slate-400 bg-slate-50 text-slate-900;
+  }
+
+  .edit-btn,
+  .deactivate-btn,
+  .reactivate-btn {
+    @apply inline-flex items-center justify-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-bold transition;
+  }
+
+  .edit-btn {
+    @apply border-blue-200 bg-blue-50 text-blue-700;
+  }
+
+  .edit-btn:hover {
+    @apply border-blue-300 bg-blue-100 text-blue-800;
+  }
+
+  .deactivate-btn {
+    @apply border-red-200 bg-red-50 text-red-700;
+  }
+
+  .deactivate-btn:hover {
+    @apply border-red-300 bg-red-100 text-red-800;
+  }
+
+  .reactivate-btn {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
+  }
+
+  .reactivate-btn:hover {
+    @apply border-emerald-300 bg-emerald-100 text-emerald-800;
   }
 
   .status-badge {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold tracking-wide uppercase;
+    @apply inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-bold uppercase tracking-wide;
   }
 
-  .action-btn {
-    @apply inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm tracking-wide
-           transition-all duration-200 ease-out cursor-pointer shadow-sm
-           disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+  .alert-error,
+  .alert-success {
+    @apply flex items-center justify-between rounded-xl border px-4 py-3 text-sm font-semibold;
   }
 
-  .approve-btn {
-    @apply action-btn bg-emerald-500 text-white border-transparent;
-  }
-  .approve-btn:hover:not(:disabled) {
-    @apply bg-emerald-600 shadow-md shadow-emerald-500/20 -translate-y-0.5;
+  .alert-error {
+    @apply border-red-200 bg-red-50 text-red-700;
   }
 
-  .reject-btn {
-    @apply action-btn bg-white text-slate-600 border border-slate-200;
-  }
-  .reject-btn:hover:not(:disabled) {
-    @apply bg-slate-50 border-slate-300 text-slate-800 -translate-y-0.5;
+  .alert-success {
+    @apply border-emerald-200 bg-emerald-50 text-emerald-700;
   }
 
-  .skeleton {
-    @apply bg-slate-100 rounded-lg animate-pulse;
+  .alert-error button,
+  .alert-success button {
+    @apply ml-4 text-xl leading-none opacity-70 transition hover:opacity-100;
   }
-}
 
-@layer utilities {
-  .animate-float {
-    animation: float 3s ease-in-out infinite;
+  .modal-overlay {
+    @apply fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/60 p-4 backdrop-blur-sm;
   }
-  .animate-pulse-glow {
-    animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+
+  .modal-card {
+    @apply my-8 w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white;
+    box-shadow: 0 30px 80px -20px rgba(15, 23, 42, 0.5);
   }
-}
 
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
-  100% { transform: translateY(0px); }
-}
+  .modal-close {
+    @apply flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-2xl leading-none text-slate-500 transition hover:bg-slate-200 hover:text-slate-900 disabled:opacity-50;
+  }
 
-@keyframes pulse-glow {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: .7; transform: scale(0.95); }
+  .loading-spinner,
+  .button-spinner {
+    @apply inline-block h-4 w-4 animate-spin rounded-full border-2;
+  }
+
+  .loading-spinner {
+    @apply border-slate-300 border-t-slate-700;
+  }
+
+  .button-spinner {
+    @apply border-white/40 border-t-white;
+  }
 }
