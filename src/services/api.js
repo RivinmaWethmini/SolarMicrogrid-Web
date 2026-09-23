@@ -36,6 +36,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Return friendly error messages when server responds with bad request
     return Promise.reject(error);
   }
 );
