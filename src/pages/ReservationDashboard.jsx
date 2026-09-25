@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import toast, { Toaster } from 'react-hot-toast';
 import {
   RefreshCw,
   QrCode,
@@ -20,8 +23,11 @@ import {
   User,
   Leaf,
   Sun,
+  ArrowRight,
+  Clock,
+  Users,
 } from 'lucide-react';
-import api from '../services/api';
+import api, { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ReservationRow from '../components/ReservationRow';
 import emptyStateSvg from '../assets/images/empty-state.svg';
@@ -325,11 +331,24 @@ export default function ReservationDashboard() {
   const [search, setSearch] = useState('');
   const [loadingId, setLoadingId] = useState(null);
   const [selectedQrReservation, setSelectedQrReservation] = useState(null);
+  const [pendingProsumersCount, setPendingProsumersCount] = useState(0);
 
   const userRole = (user?.role || '').toLowerCase();
   const isAdmin = userRole === 'admin';
   const isProsumer = userRole === 'prosumer';
   const isConsumer = userRole === 'consumer';
+
+  useEffect(() => {
+    if (isAdmin) {
+      authApi.getAdminStats()
+        .then((res) => {
+          if (res?.pendingProsumers !== undefined) {
+            setPendingProsumersCount(res.pendingProsumers);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAdmin]);
 
   const portalConfig = isAdmin
     ? {
@@ -503,13 +522,13 @@ export default function ReservationDashboard() {
                 <h1 className="text-3xl font-black text-white tracking-tight leading-none">
                   {portalConfig.title}
                 </h1>
-                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-xs font-semibold">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                  Live Operator
+                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${portalConfig.badgeClass}`}>
+                  {portalConfig.icon}
+                  {portalConfig.badge}
                 </span>
               </div>
               <p className="text-sm text-slate-300 mt-2 font-medium">
-                Smart Solar Microgrid · Energy Slot Reservation &amp; Dispatch Control Center
+                {portalConfig.subtitle}
               </p>
             </div>
           </div>
@@ -574,16 +593,27 @@ export default function ReservationDashboard() {
               </div>
             )}
 
-            {/* Admin Navigation Pill to Prosumer Approvals */}
-            {user?.role?.toLowerCase() === 'admin' && (
-              <Link
-                to="/admin/approvals"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFD000]/15 hover:bg-[#FFD000]/25 text-[#FFD000] border border-[#FFD000]/30 text-xs font-bold transition-all shadow-sm"
-                title="View and verify pending prosumer interconnection applications"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Prosumer Approvals</span>
-              </Link>
+            {/* Operator Suite Navigation Tabs */}
+            {isAdmin && (
+              <div className="flex items-center p-1 rounded-full bg-[#15171E] border border-white/10 shadow-inner">
+                <Link
+                  to="/admin/approvals"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all"
+                  title="View pending prosumer registrations"
+                >
+                  <Users className="w-3.5 h-3.5 text-[#FFD000]" />
+                  <span>Prosumer Approvals</span>
+                  {pendingProsumersCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#FFD000] text-black text-[10px] font-black animate-pulse">
+                      {pendingProsumersCount}
+                    </span>
+                  )}
+                </Link>
+                <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#FFD000] text-black shadow-md">
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Reservations</span>
+                </div>
+              </div>
             )}
 
             {/* Refresh Button */}
@@ -608,6 +638,42 @@ export default function ReservationDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Action Required Banner for Pending Prosumers */}
+        {isAdmin && pendingProsumersCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 sm:p-5 rounded-3xl bg-[#FFD000]/10 border border-[#FFD000]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-[#FFD000]/5"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-[#FFD000]/20 border border-[#FFD000]/40 text-[#FFD000] flex items-center justify-center font-bold shadow-inner flex-shrink-0">
+                <Clock className="w-6 h-6 animate-pulse text-[#FFD000]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white tracking-tight">
+                    {pendingProsumersCount} Prosumer Registration{pendingProsumersCount > 1 ? 's' : ''} Awaiting Admin Approval
+                  </h4>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/30 text-[10px] font-black uppercase tracking-wider">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Newly registered solar energy producers are waiting for Grid Operator verification.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/admin/approvals"
+              className="px-5 py-2.5 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#FFD000]/20 flex-shrink-0"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Review Pending Prosumers</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </motion.div>
+        )}
 
         {/* 5 Stat Cards — Yellow & Black High Contrast Theme */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
