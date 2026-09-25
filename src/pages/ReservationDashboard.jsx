@@ -138,7 +138,7 @@ function StatCard({ label, value, theme, icon, delay, subtitle }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.35, ease: 'easeOut' }}
-      className={`relative p-5 rounded-3xl transition-all duration-300 hover:-translate-y-1 ${cardClass}`}
+      className={`relative p-5 rounded-3xl transition-all duration-300 ${cardClass}`}
     >
       <div className="flex items-center justify-between">
         <div>
@@ -160,7 +160,7 @@ function FilterPill({ label, active, count, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`relative px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all duration-200 ${
+      className={`relative px-4 py-2 rounded-full text-xs font-bold tracking-normal transition-all duration-200 ${
         active
           ? 'text-[#0A0A0C] bg-[#FFD000] shadow-md shadow-[#FFD000]/25'
           : 'text-slate-400 hover:text-slate-200 bg-white/[0.04] border border-white/5'
@@ -234,14 +234,23 @@ function QrModal({ reservation, onClose }) {
           {qrImageUrl ? (
             <>
               <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-[#FFD000]">
-                <img src={qrImageUrl} alt="Dispatch QR Pass" className="w-48 h-48 rounded-lg" />
+                <img src={qrImageUrl} alt="Dispatch QR Pass" className="w-56 h-56 rounded-lg" />
               </div>
               <p className="mt-3.5 text-xs font-mono text-[#FFD000] font-bold tracking-wider">
                 #{String(reservation.id ?? reservation.reservationId).slice(-8).toUpperCase()}
               </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Prosumer: <span className="text-slate-200 font-semibold">{reservation.prosumerNic ?? reservation.prosumerId}</span>
-              </p>
+              <div className="mt-2 text-center">
+                <p className="text-xs text-slate-200 font-semibold">
+                  {reservation.nodeName || reservation.nodeId || 'Microgrid Solar Node'}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {reservation.startTime ? (
+                    `${reservation.startTime.replace('T', ' ')}${reservation.endTime ? ` – ${reservation.endTime.replace('T', ' ')}` : ''}`
+                  ) : (
+                    `Prosumer: ${reservation.prosumerNic ?? reservation.prosumerId}`
+                  )}
+                </p>
+              </div>
             </>
           ) : (
             <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
@@ -423,12 +432,16 @@ export default function ReservationDashboard() {
       />
 
       <main className="max-w-7xl mx-auto px-6 sm:px-8 py-10">
-        {/* Header Bar */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative">
-              <video src={solarGridVideo} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-            </div>
+        {/* Editorial Solar Hero Banner */}
+        <div className="relative w-full h-44 overflow-hidden rounded-3xl mb-6 border border-white/10 shadow-2xl">
+          <img
+            src="/images/reservation_solar_header.jpg"
+            alt="Solar microgrid installation"
+            className="w-full h-full object-cover"
+          />
+          {/* Dark gradient scrim */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08090C]/95 via-[#08090C]/70 to-transparent" />
+          <div className="absolute inset-0 flex items-center px-8">
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-3xl font-black text-white tracking-tight leading-none">
@@ -439,10 +452,23 @@ export default function ReservationDashboard() {
                   Live Operator
                 </span>
               </div>
-              <p className="text-xs text-slate-400 tracking-wide mt-1.5">
-                Smart Solar Microgrid Energy Slot Reservation &amp; Dispatch Control Center
+              <p className="text-sm text-slate-300 mt-2 font-medium">
+                Smart Solar Microgrid · Energy Slot Reservation &amp; Dispatch Control Center
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Action Bar & Connection Status */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              API Connected (Port 5298)
+            </div>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Microgrid Dispatch Node Controller
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -460,10 +486,6 @@ export default function ReservationDashboard() {
               <QrCode className="w-3.5 h-3.5" />
               Scan QR
             </Link>
-            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              API Connected (5298)
-            </div>
             <button
               onClick={fetchReservationsAndStats}
               disabled={loading}
@@ -590,7 +612,7 @@ export default function ReservationDashboard() {
                     {TABLE_HEADERS.map((h) => (
                       <th
                         key={h}
-                        className="px-6 py-4 text-[11px] font-black text-slate-400 tracking-wider uppercase"
+                        className="px-6 py-4 text-[11px] font-bold text-slate-400 tracking-wider uppercase"
                       >
                         {h}
                       </th>
