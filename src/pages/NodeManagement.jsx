@@ -336,7 +336,7 @@ export default function NodeManagement() {
               Back to Dashboard
             </Link>
 
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700">
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
               <Network className="h-3.5 w-3.5" />
               Grid Operator
             </span>
@@ -558,7 +558,7 @@ export default function NodeManagement() {
           <div className="overflow-x-auto">
             <table className="min-w-[1100px] w-full text-left">
               <thead className="bg-slate-50">
-                <tr className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                <tr className="text-xs font-bold text-slate-500">
                   <th className="px-5 py-4">Node ID</th>
                   <th className="px-5 py-4">Name</th>
                   <th className="px-5 py-4">Location</th>
