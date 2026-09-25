@@ -191,16 +191,27 @@ export default function AdminProsumerApprovals() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            {/* Navigation Tabs between Reservations and Approvals */}
             <div className="flex items-center p-1 rounded-full bg-[#15171E] border border-white/10">
               <Link
                 to="/reservations"
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
               >
                 <Zap className="w-3.5 h-3.5 text-[#FFD000]" />
                 <span>Reservations</span>
               </Link>
-              <div className="flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-bold bg-[#FFD000] text-black shadow-md">
+              <Link
+                to="/nodes"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
+              >
+                <span>Nodes</span>
+              </Link>
+              <Link
+                to="/scan"
+                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
+              >
+                <span>Verify Pass</span>
+              </Link>
+              <div className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold bg-[#FFD000] text-black shadow-md">
                 <ShieldCheck className="w-3.5 h-3.5" />
                 <span>Approvals</span>
                 {stats.pendingProsumers > 0 && (

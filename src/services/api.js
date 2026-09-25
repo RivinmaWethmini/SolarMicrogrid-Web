@@ -151,7 +151,6 @@ export const authApi = {
     const response = await api.post('/auth/login', { identifier, password, deviceInfo });
     return response.data;
   },
-
   register: async ({ email, username, password, fullName, nic, role, otp, deviceInfo = 'SolarMicrogrid Web Dashboard' }) => {
     const response = await api.post('/auth/register', {
       email,

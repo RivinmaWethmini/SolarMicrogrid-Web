@@ -1,11 +1,12 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import ReservationManagement from './pages/ReservationManagement';
+import ReservationDashboard from './pages/ReservationDashboard';
+import NodeManagement from './pages/NodeManagement';
+import QrScannerPage from './pages/QrScannerPage';
 import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
 function App() {
@@ -15,8 +16,8 @@ function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            className:
-              'font-sans font-semibold text-xs rounded-2xl bg-[#16171E] text-white border border-white/10 shadow-xl',
+            duration: 3600,
+            className: 'ops-toast',
           }}
         />
         <Routes>
@@ -28,8 +29,28 @@ function App() {
           <Route
             path="/reservations"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Prosumer', 'Consumer']}>
-                <ReservationManagement />
+              <ProtectedRoute allowedRoles={['Admin', 'Prosumer', 'Consumer', 'GridOperator']}>
+                <ReservationDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Member 3 - Avishka: Microgrid Node Management */}
+          <Route
+            path="/nodes"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'GridOperator']}>
+                <NodeManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Member 4 - Rivinma: QR Dispatch Verification Pass Scanner */}
+          <Route
+            path="/scan"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'GridOperator', 'Prosumer']}>
+                <QrScannerPage />
               </ProtectedRoute>
             }
           />
