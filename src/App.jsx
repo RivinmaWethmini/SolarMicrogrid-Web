@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import ReservationDashboard from './pages/ReservationDashboard';
 import NodeManagement from './pages/NodeManagement';
@@ -8,7 +7,13 @@ import { Toaster } from 'react-hot-toast';
 function App() {
   return (
     <Router>
-      <Toaster position="top-right" />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3600,
+          className: 'ops-toast',
+        }}
+      />
       <Routes>
         <Route path="/" element={<Navigate to="/reservations" replace />} />
         <Route path="/reservations" element={<ReservationDashboard />} />
