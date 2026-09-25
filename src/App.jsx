@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ReservationManagement from './pages/ReservationManagement';
 import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
+import NodeManagement from './pages/NodeManagement';
+import QrScannerPage from './pages/QrScannerPage';
 
 function App() {
   return (
@@ -44,6 +46,26 @@ function App() {
             }
           />
           <Route path="/admin" element={<Navigate to="/admin/approvals" replace />} />
+
+          {/* Member 3: Microgrid Node Management (Admin / Grid Operator) */}
+          <Route
+            path="/nodes"
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <NodeManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Member 4: QR Dispatch Pass Verification Scanner */}
+          <Route
+            path="/scan"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Prosumer']}>
+                <QrScannerPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Default and Wildcard Fallbacks */}
           <Route path="/" element={<Navigate to="/reservations" replace />} />

@@ -2,8 +2,32 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck, LogOut, User, Leaf, Sun } from 'lucide-react';
-import api from '../services/api';
+import {
+  RefreshCw,
+  QrCode,
+  X,
+  Copy,
+  Check,
+  AlertCircle,
+  Zap,
+  ShieldCheck,
+  CalendarDays,
+  CalendarClock,
+  CalendarCheck,
+  CircleX,
+  TrendingUp,
+  Search,
+  Network,
+  CircleCheck,
+  LogOut,
+  User,
+  Leaf,
+  Sun,
+  ArrowRight,
+  Clock,
+  Users,
+} from 'lucide-react';
+import api, { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ReservationRow from '../components/ReservationRow';
 import emptyStateSvg from '../assets/images/empty-state.svg';
@@ -67,8 +91,9 @@ function ErrorState({ message, onRetry }) {
       <p className="text-slate-400 text-xs mb-5">Ensure Central Microgrid API is active on port 5298 and database is connected.</p>
       <button
         onClick={onRetry}
-        className="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-full border border-white/15 transition-all shadow-md"
+        className="flex items-center gap-2 px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-full border border-white/15 transition-all shadow-md"
       >
+        <RefreshCw className="w-4 h-4" />
         Retry Connection
       </button>
     </div>
@@ -76,6 +101,7 @@ function ErrorState({ message, onRetry }) {
 }
 
 function StatCard({ label, value, theme, icon, delay, subtitle }) {
+  // Theme options: 'yellow', 'cream', 'dark-emerald', 'dark-amber', 'dark-rose'
   let cardClass = '';
   let valueClass = '';
   let labelClass = '';
@@ -107,6 +133,7 @@ function StatCard({ label, value, theme, icon, delay, subtitle }) {
     subClass = 'text-[#FFD000]/70';
     iconClass = 'bg-[#FFD000]/10 text-[#FFD000]';
   } else {
+    // dark-rose
     cardClass = 'bg-[#121318] text-white border border-rose-500/20 shadow-lg';
     valueClass = 'text-rose-400';
     labelClass = 'text-slate-400';
@@ -119,14 +146,14 @@ function StatCard({ label, value, theme, icon, delay, subtitle }) {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.35, ease: 'easeOut' }}
-      className={`relative p-5 rounded-3xl transition-all duration-300 hover:-translate-y-1 ${cardClass}`}
+      className={`relative p-5 rounded-3xl transition-all duration-300 ${cardClass}`}
     >
       <div className="flex items-center justify-between">
         <div>
           <p className={`text-3xl font-black tracking-tight leading-none ${valueClass}`}>{value}</p>
-          <p className={`text-[11px] tracking-wider uppercase mt-2 font-bold ${labelClass}`}>{label}</p>
+          <p className={`text-xs mt-2 font-bold ${labelClass}`}>{label}</p>
           {subtitle && (
-            <p className={`text-[10px] font-medium mt-0.5 ${subClass}`}>{subtitle}</p>
+            <p className={`text-[11px] font-medium mt-0.5 ${subClass}`}>{subtitle}</p>
           )}
         </div>
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${iconClass}`}>
@@ -141,7 +168,7 @@ function FilterPill({ label, active, count, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`relative px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all duration-200 ${
+      className={`relative px-4 py-2 rounded-full text-xs font-bold tracking-normal transition-all duration-200 ${
         active
           ? 'text-[#0A0A0C] bg-[#FFD000] shadow-md shadow-[#FFD000]/25'
           : 'text-slate-400 hover:text-slate-200 bg-white/[0.04] border border-white/5'
@@ -215,14 +242,23 @@ function QrModal({ reservation, onClose }) {
           {qrImageUrl ? (
             <>
               <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-[#FFD000]">
-                <img src={qrImageUrl} alt="Dispatch QR Pass" className="w-48 h-48 rounded-lg" />
+                <img src={qrImageUrl} alt="Dispatch QR Pass" className="w-56 h-56 rounded-lg" />
               </div>
               <p className="mt-3.5 text-xs font-mono text-[#FFD000] font-bold tracking-wider">
                 #{String(reservation.id ?? reservation.reservationId).slice(-8).toUpperCase()}
               </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Prosumer: <span className="text-slate-200 font-semibold">{reservation.prosumerNic ?? reservation.prosumerId}</span>
-              </p>
+              <div className="mt-2 text-center">
+                <p className="text-xs text-slate-200 font-semibold">
+                  {reservation.nodeName || reservation.nodeId || 'Microgrid Solar Node'}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {reservation.startTime ? (
+                    `${reservation.startTime.replace('T', ' ')}${reservation.endTime ? ` – ${reservation.endTime.replace('T', ' ')}` : ''}`
+                  ) : (
+                    `Prosumer: ${reservation.prosumerNic ?? reservation.prosumerId}`
+                  )}
+                </p>
+              </div>
             </>
           ) : (
             <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
@@ -235,25 +271,27 @@ function QrModal({ reservation, onClose }) {
         </div>
 
         {payload && (
-          <div className="bg-black/60 rounded-2xl p-3 border border-white/10 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
-              <span className="text-xs font-semibold text-slate-300">Cryptographically Signed &amp; Verified</span>
+          <div className="bg-black/60 rounded-2xl p-3.5 border border-white/10 text-left">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-semibold text-slate-400">Cryptographic Token</span>
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors"
+              >
+                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                {copied ? 'Copied' : 'Copy Payload'}
+              </button>
             </div>
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors bg-white/5 px-2.5 py-1 rounded-full"
-            >
-              {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-              {copied ? 'Copied' : 'Copy Token'}
-            </button>
+            <pre className="text-[10px] text-slate-300 font-mono overflow-x-auto max-h-24 p-2 bg-black/40 rounded-xl">
+              {payload}
+            </pre>
           </div>
         )}
 
         <div className="mt-6 flex justify-end">
           <button
             onClick={onClose}
-            className="w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-[#0A0A0C] font-black text-xs tracking-wider uppercase shadow-lg shadow-[#FFD000]/20 transition-all"
+            className="w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-[#0A0A0C] font-bold text-sm shadow-lg shadow-[#FFD000]/20 transition-all"
           >
             Close Viewer
           </button>
@@ -293,11 +331,24 @@ export default function ReservationDashboard() {
   const [search, setSearch] = useState('');
   const [loadingId, setLoadingId] = useState(null);
   const [selectedQrReservation, setSelectedQrReservation] = useState(null);
+  const [pendingProsumersCount, setPendingProsumersCount] = useState(0);
 
   const userRole = (user?.role || '').toLowerCase();
   const isAdmin = userRole === 'admin';
   const isProsumer = userRole === 'prosumer';
   const isConsumer = userRole === 'consumer';
+
+  useEffect(() => {
+    if (isAdmin) {
+      authApi.getAdminStats()
+        .then((res) => {
+          if (res?.pendingProsumers !== undefined) {
+            setPendingProsumersCount(res.pendingProsumers);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [isAdmin]);
 
   const portalConfig = isAdmin
     ? {
@@ -400,7 +451,9 @@ export default function ReservationDashboard() {
     try {
       await api.put(`/reservations/${id}/${actionEndpoint}`);
       toast.success(`Reservation ${status}!`, {
-        icon: status === 'Approved' ? '✅' : '❌',
+        icon: status === 'Approved'
+          ? <CircleCheck className="w-5 h-5 text-emerald-400" />
+          : <CircleX className="w-5 h-5 text-red-400" />,
       });
       await fetchReservationsAndStats();
     } catch (err) {
@@ -454,29 +507,61 @@ export default function ReservationDashboard() {
       />
 
       <main className="max-w-7xl mx-auto px-6 sm:px-8 py-10">
-        {/* Header Bar */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative">
-              <video src={solarGridVideo} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-            </div>
+        {/* Editorial Solar Hero Banner */}
+        <div className="relative w-full h-44 overflow-hidden rounded-3xl mb-6 border border-white/10 shadow-2xl">
+          <img
+            src="/images/reservation_solar_header.jpg"
+            alt="Solar microgrid installation"
+            className="w-full h-full object-cover"
+          />
+          {/* Dark gradient scrim */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#08090C]/95 via-[#08090C]/70 to-transparent" />
+          <div className="absolute inset-0 flex items-center px-8">
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-3xl font-black text-white tracking-tight leading-none">
                   {portalConfig.title}
                 </h1>
-                <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${portalConfig.badgeClass}`}>
+                <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-semibold ${portalConfig.badgeClass}`}>
                   {portalConfig.icon}
                   {portalConfig.badge}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 tracking-wide mt-1.5">
+              <p className="text-sm text-slate-300 mt-2 font-medium">
                 {portalConfig.subtitle}
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Action Bar & Connection Status */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-8">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+              API Connected (Port 5298)
+            </div>
+            <span className="text-xs text-slate-400 hidden sm:inline">
+              Microgrid Dispatch Node Controller
+            </span>
+          </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/nodes"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all shadow-md"
+            >
+              <Network className="w-3.5 h-3.5" />
+              Solar Nodes
+            </Link>
+            <Link
+              to="/scan"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black text-xs font-black transition-all shadow-lg shadow-[#FFD000]/20"
+            >
+              <QrCode className="w-3.5 h-3.5" />
+              Scan QR
+            </Link>
+
             {/* Live API Heartbeat Badge */}
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -508,16 +593,27 @@ export default function ReservationDashboard() {
               </div>
             )}
 
-            {/* Admin Navigation Pill to Prosumer Approvals */}
-            {user?.role?.toLowerCase() === 'admin' && (
-              <Link
-                to="/admin/approvals"
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFD000]/15 hover:bg-[#FFD000]/25 text-[#FFD000] border border-[#FFD000]/30 text-xs font-bold transition-all shadow-sm"
-                title="View and verify pending prosumer interconnection applications"
-              >
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Prosumer Approvals</span>
-              </Link>
+            {/* Operator Suite Navigation Tabs */}
+            {isAdmin && (
+              <div className="flex items-center p-1 rounded-full bg-[#15171E] border border-white/10 shadow-inner">
+                <Link
+                  to="/admin/approvals"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-300 hover:text-white hover:bg-white/5 transition-all"
+                  title="View pending prosumer registrations"
+                >
+                  <Users className="w-3.5 h-3.5 text-[#FFD000]" />
+                  <span>Prosumer Approvals</span>
+                  {pendingProsumersCount > 0 && (
+                    <span className="px-1.5 py-0.2 rounded-full bg-[#FFD000] text-black text-[10px] font-black animate-pulse">
+                      {pendingProsumersCount}
+                    </span>
+                  )}
+                </Link>
+                <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-[#FFD000] text-black shadow-md">
+                  <Zap className="w-3.5 h-3.5" />
+                  <span>Reservations</span>
+                </div>
+              </div>
             )}
 
             {/* Refresh Button */}
@@ -543,68 +639,88 @@ export default function ReservationDashboard() {
           </div>
         </div>
 
-        {/* 5 Stat Cards - Yellow & Black High Contrast Theme */}
+        {/* Action Required Banner for Pending Prosumers */}
+        {isAdmin && pendingProsumersCount > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 p-4 sm:p-5 rounded-3xl bg-[#FFD000]/10 border border-[#FFD000]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl shadow-[#FFD000]/5"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-[#FFD000]/20 border border-[#FFD000]/40 text-[#FFD000] flex items-center justify-center font-bold shadow-inner flex-shrink-0">
+                <Clock className="w-6 h-6 animate-pulse text-[#FFD000]" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-sm font-bold text-white tracking-tight">
+                    {pendingProsumersCount} Prosumer Registration{pendingProsumersCount > 1 ? 's' : ''} Awaiting Admin Approval
+                  </h4>
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/30 text-[10px] font-black uppercase tracking-wider">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Newly registered solar energy producers are waiting for Grid Operator verification.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/admin/approvals"
+              className="px-5 py-2.5 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black text-xs font-black transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#FFD000]/20 flex-shrink-0"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              <span>Review Pending Prosumers</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </motion.div>
+        )}
+
+        {/* 5 Stat Cards — Yellow & Black High Contrast Theme */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
-          {/* Card 1: Total Bookings (Cream Contrast Card) */}
+          {/* Card 1: Total Bookings */}
           <StatCard
             label="Total Bookings"
             value={loading ? '…' : stats.total}
             theme="cream"
             delay={0}
-            icon={
-              <svg className="w-5 h-5 text-[#0A0A0C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            }
+            icon={<CalendarDays className="w-5 h-5" />}
           />
 
-          {/* Card 2: Pending Action / Verification / Allocation */}
+          {/* Card 2: Pending Action */}
           <StatCard
             label={portalConfig.statPendingLabel}
             value={loading ? '…' : stats.pending}
             theme="yellow"
             delay={0.05}
-            icon={
-              <svg className="w-5 h-5 text-[#0A0A0C] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            icon={<CalendarClock className="w-5 h-5 animate-pulse" />}
           />
 
-          {/* Card 3: Approved / Active Passes / Confirmed */}
+          {/* Card 3: Approved */}
           <StatCard
             label={portalConfig.statApprovedLabel}
             value={loading ? '…' : stats.approved}
             theme="dark-emerald"
             delay={0.1}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            icon={<CalendarCheck className="w-5 h-5" />}
           />
 
-          {/* Card 4: Approved Future / Scheduled */}
+          {/* Card 4: Approved Future */}
           <StatCard
             label={portalConfig.statApprovedFutureLabel}
             value={loading ? '…' : stats.approvedFutureReservations}
             theme="dark-amber"
             delay={0.15}
             subtitle="Scheduled ahead"
-            icon={<Calendar className="w-5 h-5 text-[#FFD000]" />}
+            icon={<TrendingUp className="w-5 h-5 text-[#FFD000]" />}
           />
 
-          {/* Card 5: Cancelled / Rejected (Dark Obsidian Rose) */}
+          {/* Card 5: Cancelled / Rejected */}
           <StatCard
             label="Cancelled / Rejected"
             value={loading ? '…' : (stats.rejected + stats.cancelled)}
             theme="dark-rose"
             delay={0.2}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            icon={<CircleX className="w-5 h-5" />}
           />
         </div>
 
@@ -629,14 +745,7 @@ export default function ReservationDashboard() {
             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
               {/* Search input */}
               <div className="relative flex-1 sm:flex-initial">
-                <svg
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search NIC, Node, ID..."
@@ -681,7 +790,7 @@ export default function ReservationDashboard() {
                     {TABLE_HEADERS.map((h) => (
                       <th
                         key={h}
-                        className="px-6 py-4 text-[11px] font-black text-slate-400 tracking-wider uppercase"
+                        className="px-6 py-4 text-xs font-bold text-slate-400"
                       >
                         {h}
                       </th>
