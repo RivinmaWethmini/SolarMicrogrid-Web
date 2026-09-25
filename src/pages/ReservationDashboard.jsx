@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
+import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck, LogOut, User } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ReservationRow from '../components/ReservationRow';
 import emptyStateSvg from '../assets/images/empty-state.svg';
 import solarGridVideo from '../assets/images/Solar Grid.mp4';
@@ -273,6 +275,9 @@ const TABLE_HEADERS = [
 ];
 
 export default function ReservationDashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [reservations, setReservations] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -288,6 +293,16 @@ export default function ReservationDashboard() {
   const [search, setSearch] = useState('');
   const [loadingId, setLoadingId] = useState(null);
   const [selectedQrReservation, setSelectedQrReservation] = useState(null);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch {
+      navigate('/login');
+    }
+  };
 
   const fetchReservationsAndStats = useCallback(async () => {
     try {
@@ -420,18 +435,69 @@ export default function ReservationDashboard() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
+          <div className="flex flex-wrap items-center gap-2.5">
+            {/* Live API Heartbeat Badge */}
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               API Connected (5298)
             </div>
+
+            {/* Authenticated User Profile Chip */}
+            {user && (
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] border border-white/10 shadow-sm">
+                <div className="w-5 h-5 rounded-full bg-[#FFD000]/20 text-[#FFD000] flex items-center justify-center font-bold text-[10px]">
+                  {user.email ? user.email[0].toUpperCase() : <User className="w-3 h-3" />}
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-semibold text-slate-200 max-w-[140px] sm:max-w-[180px] truncate">
+                    {user.email}
+                  </span>
+                  <span
+                    className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                      user.role?.toLowerCase() === 'admin'
+                        ? 'bg-[#FFD000]/15 text-[#FFD000] border-[#FFD000]/30'
+                        : user.role?.toLowerCase() === 'prosumer'
+                        ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                        : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
+                    }`}
+                  >
+                    {user.role}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Admin Navigation Pill to Prosumer Approvals */}
+            {user?.role?.toLowerCase() === 'admin' && (
+              <Link
+                to="/admin/approvals"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#FFD000]/15 hover:bg-[#FFD000]/25 text-[#FFD000] border border-[#FFD000]/30 text-xs font-bold transition-all shadow-sm"
+                title="View and verify pending prosumer interconnection applications"
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                <span>Prosumer Approvals</span>
+              </Link>
+            )}
+
+            {/* Refresh Button */}
             <button
               onClick={fetchReservationsAndStats}
               disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all disabled:opacity-50 shadow-md"
+              className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all disabled:opacity-50 shadow-md"
+              title="Refresh reservations and live stats"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+
+            {/* Logout Button */}
+            <button
+              onClick={handleLogout}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 text-xs font-bold transition-all shadow-md"
+              title="Sign out and revoke active session"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Logout</span>
             </button>
           </div>
         </div>

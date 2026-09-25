@@ -1,25 +1,56 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import ReservationManagement from './pages/ReservationManagement';
 import { Toaster } from 'react-hot-toast';
-
-// TODO (Member 2): When Login page is ready, import and wrap protected routes:
-// import PrivateRoute from './components/PrivateRoute';
-// import LoginPage from './pages/LoginPage';
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import ReservationManagement from './pages/ReservationManagement';
+import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
 function App() {
   return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route path="/" element={<Navigate to="/reservations" replace />} />
+    <AuthProvider>
+      <Router>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            className:
+              'font-sans font-semibold text-xs rounded-2xl bg-[#16171E] text-white border border-white/10 shadow-xl',
+          }}
+        />
+        <Routes>
+          {/* Public Authentication Routes */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-        {/* TODO (Member 2): Replace with protected route when auth is integrated:
-            <Route path="/reservations" element={<PrivateRoute><ReservationManagement /></PrivateRoute>} />
-        */}
-        <Route path="/reservations" element={<ReservationManagement />} />
-      </Routes>
-    </Router>
+          {/* Protected Operator & Prosumer Energy Slot Queue */}
+          <Route
+            path="/reservations"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Prosumer']}>
+                <ReservationManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Admin Prosumer Verification & Approvals Suite */}
+          <Route
+            path="/admin/approvals"
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <AdminProsumerApprovals />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/admin" element={<Navigate to="/admin/approvals" replace />} />
+
+          {/* Default and Wildcard Fallbacks */}
+          <Route path="/" element={<Navigate to="/reservations" replace />} />
+          <Route path="*" element={<Navigate to="/reservations" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
   );
 }
 
