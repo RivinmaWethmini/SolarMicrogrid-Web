@@ -87,8 +87,14 @@ export default function Login() {
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || authResponse.user?.email;
       toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
 
-      const defaultDest = authResponse.user?.role?.toLowerCase() === 'admin' ? '/admin/approvals' : '/reservations';
-      const destination = location.state?.from?.pathname || defaultDest;
+      const userRole = authResponse.user?.role?.toLowerCase();
+      let destination = location.state?.from?.pathname;
+      if (destination && destination.startsWith('/admin') && userRole !== 'admin') {
+        destination = '/reservations';
+      }
+      if (!destination) {
+        destination = userRole === 'admin' ? '/admin/approvals' : '/reservations';
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Invalid email/username or password.';
@@ -180,8 +186,14 @@ export default function Login() {
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || 'Member';
       toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
 
-      const defaultDest = authResponse.user?.role?.toLowerCase() === 'admin' ? '/admin/approvals' : '/reservations';
-      const destination = location.state?.from?.pathname || defaultDest;
+      const userRole = authResponse.user?.role?.toLowerCase();
+      let destination = location.state?.from?.pathname;
+      if (destination && destination.startsWith('/admin') && userRole !== 'admin') {
+        destination = '/reservations';
+      }
+      if (!destination) {
+        destination = userRole === 'admin' ? '/admin/approvals' : '/reservations';
+      }
       navigate(destination, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Verification failed. Please check the code.';
