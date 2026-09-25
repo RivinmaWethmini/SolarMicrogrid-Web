@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import ReservationManagement from './pages/ReservationManagement';
 import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
+import NodeManagement from './pages/NodeManagement';
+import QrScannerPage from './pages/QrScannerPage';
 
 function App() {
   return (
@@ -45,30 +47,32 @@ function App() {
           />
           <Route path="/admin" element={<Navigate to="/admin/approvals" replace />} />
 
+          {/* Member 3: Microgrid Node Management (Admin / Grid Operator) */}
+          <Route
+            path="/nodes"
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <NodeManagement />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Member 4: QR Dispatch Pass Verification Scanner */}
+          <Route
+            path="/scan"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Prosumer']}>
+                <QrScannerPage />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Default and Wildcard Fallbacks */}
           <Route path="/" element={<Navigate to="/reservations" replace />} />
           <Route path="*" element={<Navigate to="/reservations" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
-import ReservationDashboard from './pages/ReservationDashboard';
-import NodeManagement from './pages/NodeManagement';
-import QrScannerPage from './pages/QrScannerPage';
-import { Toaster } from 'react-hot-toast';
-
-function App() {
-  return (
-    <Router>
-      <Toaster position="top-right" />
-      <Routes>
-        <Route path="/" element={<Navigate to="/reservations" replace />} />
-        <Route path="/reservations" element={<ReservationDashboard />} />
-        {/* Member 3 - Avishka: Node Management */}
-        <Route path="/nodes" element={<NodeManagement />} />
-        {/* Member 4 - QR Dispatch Verification */}
-        <Route path="/scan" element={<QrScannerPage />} />
-      </Routes>
-    </Router>
   );
 }
 
