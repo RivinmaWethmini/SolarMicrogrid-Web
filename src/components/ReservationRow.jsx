@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
   Ban,
@@ -131,13 +132,13 @@ export default function ReservationRow({
       </td>
 
       <td>
-        <div className="ledger-node">
+        <Link to="/nodes" className="ledger-node" style={{ textDecoration: 'none', color: 'inherit' }} title="View microgrid node specifications">
           <Zap aria-hidden="true" />
           <span>
             {nodeName || shortReference(nodeId, 8)}
             {nodeName && <small>{shortReference(nodeId, 5)}</small>}
           </span>
-        </div>
+        </Link>
       </td>
 
       <td>

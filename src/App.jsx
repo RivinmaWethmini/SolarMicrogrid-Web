@@ -4,10 +4,10 @@ import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Onboarding from './pages/Onboarding';
 import ReservationDashboard from './pages/ReservationDashboard';
 import NodeManagement from './pages/NodeManagement';
 import QrScannerPage from './pages/QrScannerPage';
-import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
 function App() {
   return (
@@ -21,7 +21,9 @@ function App() {
           }}
         />
         <Routes>
-          {/* Public Authentication Routes */}
+          {/* Public Onboarding & Authentication Routes */}
+          <Route path="/" element={<Onboarding />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
@@ -45,29 +47,21 @@ function App() {
             }
           />
 
-          {/* Member 4 - Rivinma: QR Dispatch Verification Pass Scanner */}
+          {/* Member 4 - QR Dispatch Verification Pass Scanner */}
           <Route
             path="/scan"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'GridOperator', 'Prosumer']}>
+              <ProtectedRoute allowedRoles={['Admin', 'GridOperator']}>
                 <QrScannerPage />
               </ProtectedRoute>
             }
           />
 
-          {/* Protected Admin Prosumer Verification & Approvals Suite */}
-          <Route
-            path="/admin/approvals"
-            element={
-              <ProtectedRoute allowedRoles={['Admin']}>
-                <AdminProsumerApprovals />
-              </ProtectedRoute>
-            }
-          />
-          <Route path="/admin" element={<Navigate to="/admin/approvals" replace />} />
+          {/* Admin Operations Console Fallback */}
+          <Route path="/admin" element={<Navigate to="/reservations" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/reservations" replace />} />
 
-          {/* Default and Wildcard Fallbacks */}
-          <Route path="/" element={<Navigate to="/reservations" replace />} />
+          {/* Wildcard Fallback */}
           <Route path="*" element={<Navigate to="/reservations" replace />} />
         </Routes>
       </Router>

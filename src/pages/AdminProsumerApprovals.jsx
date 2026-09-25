@@ -1,35 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import {
   ShieldCheck,
-  Zap,
   RefreshCw,
   Search,
   CheckCircle,
   XCircle,
   Clock,
-  UserCheck,
   UserX,
   Users,
   Sun,
   AlertCircle,
-  LogOut,
-  User,
-  ArrowRight,
-  FileBadge,
   X,
 } from 'lucide-react';
 import { authApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-import solarGridVideo from '../assets/images/Solar Grid.mp4';
-import emptyStateSvg from '../assets/images/empty-state.svg';
+import NavigationHeader from '../components/NavigationHeader';
 
 export default function AdminProsumerApprovals() {
-  const { user, logout } = useAuth();
-  const navigate = useNavigate();
-
   const [prosumers, setProsumers] = useState([]);
   const [stats, setStats] = useState({
     totalProsumers: 0,
@@ -126,11 +114,6 @@ export default function AdminProsumerApprovals() {
     } finally {
       setActionLoadingId(null);
     }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
   };
 
   // Filtering & search

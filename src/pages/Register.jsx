@@ -3,72 +3,30 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
+  SunMedium,
   User,
-  AtSign,
   Mail,
   Lock,
   Eye,
   EyeOff,
-  ShieldCheck,
-  Sun,
-  Users,
   ArrowRight,
   RefreshCw,
-  KeyRound,
+  Edit2,
   CheckCircle2,
   FileBadge,
-  Sparkles,
-  MapPin,
-  Clock,
-  Edit2,
-  AlertCircle,
+  AtSign,
+  Sun,
+  ShieldCheck,
+  Users,
 } from 'lucide-react';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import solarGridVideo from '../assets/images/Solar Grid.mp4';
+import solisFacilityImg from '../assets/images/solis-facility.jpg';
 
-const REGISTRATION_ROLES = [
-  {
-    id: 'Prosumer',
-    label: 'Solar Prosumer',
-    tag: 'Solar Producer',
-    description: 'Sell excess solar power & reserve capacity slots. Requires Operator verification.',
-    icon: Sun,
-    accent: 'text-emerald-400',
-    borderActive: 'border-emerald-400 bg-emerald-400/10',
-    badge: 'Requires Approval',
-    badgeColor: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
-  },
-  {
-    id: 'Admin',
-    label: 'Grid Operator',
-    tag: 'System Supervision',
-    description: 'Approve energy slot reservations, manage nodes, and audit microgrid health.',
-    icon: ShieldCheck,
-    accent: 'text-[#FFD000]',
-    borderActive: 'border-[#FFD000] bg-[#FFD000]/10',
-    badge: 'Full Access',
-    badgeColor: 'text-[#FFD000] bg-[#FFD000]/10 border-[#FFD000]/30',
-  },
-  {
-    id: 'Consumer',
-    label: 'Energy Consumer',
-    tag: 'Clean Energy Buyer',
-    description: 'Purchase renewable solar energy, track green savings, and book consumption.',
-    icon: Users,
-    accent: 'text-sky-400',
-    borderActive: 'border-sky-400 bg-sky-400/10',
-    badge: 'Instant Activation',
-    badgeColor: 'text-sky-400 bg-sky-400/10 border-sky-400/30',
-  },
-];
-
-const REGIONS = [
-  'Western Province (Colombo North Hub)',
-  'Western Province (Kaduwela Microgrid)',
-  'Central Province (Kandy Central Substation)',
-  'Southern Province (Galle Coastal Array)',
-  'Other / Off-Grid Island Node',
+const ROLES = [
+  { id: 'Prosumer', label: 'Prosumer', icon: Sun },
+  { id: 'Admin', label: 'Operator', icon: ShieldCheck },
+  { id: 'Consumer', label: 'Consumer', icon: Users },
 ];
 
 export default function Register() {
@@ -82,7 +40,7 @@ export default function Register() {
     }
   }, [isAuthenticated, navigate]);
 
-  // Step 1: Form State
+  // Form State
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
@@ -92,16 +50,14 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [role, setRole] = useState('Prosumer');
-  const [region, setRegion] = useState(REGIONS[0]);
   const [agreeTerms, setAgreeTerms] = useState(true);
 
-  // Step 2: 6-Digit OTP State
-  const [step, setStep] = useState(1); // 1 = Details & Credentials, 2 = 6-Digit OTP Verification
+  // OTP State
+  const [step, setStep] = useState(1); // 1 = Details, 2 = 6-Digit OTP
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [verifying, setVerifying] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [attemptsRemaining, setAttemptsRemaining] = useState(null);
 
   const otpInputsRef = useRef([]);
 
@@ -114,7 +70,7 @@ export default function Register() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  // Step 1: Validate Details and Send OTP
+  // Step 1: Submit Details & Send OTP
   const handleInitiateRegistration = async (e) => {
     e.preventDefault();
 
@@ -126,62 +82,50 @@ export default function Register() {
 
     const trimmedUsername = username.trim();
     if (!trimmedUsername) {
-      toast.error('Please choose a username for logging in.');
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_\-\.]+$/.test(trimmedUsername)) {
-      toast.error('Username can only contain letters, numbers, underscores, hyphens, and periods.');
+      toast.error('Please choose a username.');
       return;
     }
 
     if (!fullName.trim()) {
-      toast.error('Please enter your full name or organization name.');
+      toast.error('Please enter your full name.');
       return;
     }
 
-    if (!password) {
-      toast.error('Please enter a password.');
-      return;
-    }
-
-    if (password.length < 6) {
+    if (!password || password.length < 6) {
       toast.error('Password must be at least 6 characters.');
       return;
     }
 
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match. Please verify.');
+      toast.error('Passwords do not match.');
       return;
     }
 
     if (!agreeTerms) {
-      toast.error('Please accept the Solar Microgrid Grid Interconnection Terms.');
+      toast.error('Please agree to the microgrid terms.');
       return;
     }
 
     try {
       setSendingOtp(true);
-      // Dispatch 6-digit OTP code to the email address
       const res = await authApi.sendOtp(trimmedEmail, role);
-      toast.success(res.message || 'Verification passcode dispatched to your email!');
+      toast.success(res.message || 'Verification code sent to your email!');
 
       setStep(2);
       setCooldown(60);
-      setAttemptsRemaining(5);
 
       setTimeout(() => {
         otpInputsRef.current[0]?.focus();
-      }, 250);
+      }, 200);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to dispatch verification code.';
+      const msg = err.response?.data?.message || 'Failed to send verification code.';
       toast.error(msg);
     } finally {
       setSendingOtp(false);
     }
   };
 
-  // Step 2: Handle OTP Input Changes
+  // Step 2: Handle OTP Digits
   const handleOtpChange = (index, value) => {
     if (value && !/^\d$/.test(value)) return;
 
@@ -193,7 +137,6 @@ export default function Register() {
       otpInputsRef.current[index + 1]?.focus();
     }
 
-    // Auto-complete if 6 digits filled
     if (value && index === 5 && newOtp.every((d) => d !== '')) {
       handleCompleteRegistration(newOtp.join(''));
     }
@@ -207,22 +150,22 @@ export default function Register() {
 
   const handlePaste = (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim();
-    if (/^\d{6}$/.test(pastedData)) {
-      const digits = pastedData.split('');
+    const pasted = e.clipboardData.getData('text').trim();
+    if (/^\d{6}$/.test(pasted)) {
+      const digits = pasted.split('');
       setOtp(digits);
       otpInputsRef.current[5]?.focus();
-      handleCompleteRegistration(pastedData);
+      handleCompleteRegistration(pasted);
     } else {
-      toast.error('Pasted passcode must be exactly 6 digits.');
+      toast.error('Passcode must be exactly 6 digits.');
     }
   };
 
-  // Step 2: Verify OTP and Register Account
+  // Step 2: Complete Registration
   const handleCompleteRegistration = async (codeToVerify) => {
     const finalOtp = typeof codeToVerify === 'string' ? codeToVerify : otp.join('');
     if (finalOtp.length !== 6) {
-      toast.error('Please enter all 6 digits of your registration code.');
+      toast.error('Please enter all 6 digits.');
       return;
     }
 
@@ -236,32 +179,24 @@ export default function Register() {
         nic: nic.trim() || undefined,
         role,
         otp: finalOtp,
-        deviceInfo: `Web Portal (${fullName || username})`,
+        deviceInfo: `Web (${fullName || username})`,
       });
 
-      // Hydrate local authentication session
       loginWithAuthResponse(authResponse);
 
-      // Business Rule: Prosumers require Operator Approval
       if (authResponse.user?.approvalStatus === 'PendingApproval') {
         toast.success(
-          'Registration verified! Prosumer accounts require Grid Operator approval before trading energy.',
-          { duration: 7000, icon: '⏳' }
+          'Registration complete! Prosumer accounts require operator approval before trading.',
+          { duration: 6000, icon: '⏳' }
         );
       } else {
-        toast.success(
-          `Welcome to Solar Microgrid, ${authResponse.user?.fullName || authResponse.user?.username || 'Member'}!`,
-          { icon: '☀️' }
-        );
+        toast.success(`Welcome to Solis Microgrid, ${fullName || username}!`, { icon: '⚡' });
       }
 
-      const defaultDest = authResponse.user?.role?.toLowerCase() === 'admin' ? '/admin/approvals' : '/reservations';
-      navigate(defaultDest, { replace: true });
+      navigate('/reservations', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Verification failed. Please check the code.';
       toast.error(msg);
-
-      setAttemptsRemaining((prev) => (prev !== null && prev > 1 ? prev - 1 : 0));
       setOtp(['', '', '', '', '', '']);
       otpInputsRef.current[0]?.focus();
     } finally {
@@ -270,432 +205,357 @@ export default function Register() {
   };
 
   return (
-    <div className="dashboard-container min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden font-sans">
-      {/* Ambient Radial Lighting */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#FFD000]/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
+    <div className="operations-shell min-h-screen flex flex-col justify-between">
+      {/* Top Minimal Brand Bar */}
+      <header className="operations-topbar !grid-template-columns-none flex items-center justify-between px-6 sm:px-12 py-4">
+        <Link to="/" className="inline-flex items-center gap-3 text-[#f0f0e8] no-underline">
+          <span className="w-8 h-8 rounded-lg bg-[#111410] border border-[#2a2f27] flex items-center justify-center text-[#e9f85b]">
+            <SunMedium className="w-4 h-4" />
+          </span>
+          <span className="font-semibold text-sm">Solis microgrid</span>
+        </Link>
 
-      {/* Glassmorphic Container Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="glass-card max-w-xl w-full p-8 sm:p-10 relative z-10 border border-white/10 shadow-2xl my-8"
-      >
-        {/* Header with Video and Branding */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative flex-shrink-0">
-            <video
-              src={solarGridVideo}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover"
+        <div className="flex items-center gap-4 text-xs">
+          <Link to="/" className="text-[#92988d] hover:text-[#f0f0e8] transition-colors no-underline">
+            Overview
+          </Link>
+          <Link
+            to="/login"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[#f0f0e8] bg-[#151914] hover:bg-[#1f241d] border border-[#2a2f27] transition-all no-underline"
+          >
+            Sign in
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Split-Screen Architecture */}
+      <main className="flex-1 grid lg:grid-cols-12 min-h-[calc(100vh-74px)]">
+        {/* Left Column: Clean Full-Bleed Solar Photography */}
+        <section className="lg:col-span-6 relative overflow-hidden flex flex-col justify-between p-8 sm:p-14 lg:p-16 border-b lg:border-b-0 lg:border-r border-[#2a2f27]">
+          {/* High-Resolution Background */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={solisFacilityImg}
+              alt="Solis Solar Microgrid Facility"
+              className="w-full h-full object-cover object-center"
             />
+            {/* Minimal Soft Dark Scrim */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d0b] via-[#0b0d0b]/60 to-[#0b0d0b]/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0b0d0b]/80 via-transparent to-[#0b0d0b]/80" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FFD000] px-2.5 py-0.5 rounded-full bg-[#FFD000]/15 border border-[#FFD000]/30">
-                New Participant
-              </span>
-              <span className="text-[10px] font-semibold text-emerald-400 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" />
-                Zero Fees
-              </span>
-            </div>
-            <h1 className="text-2xl font-black text-white tracking-tight mt-1">
-              Join Solar Microgrid
+
+          {/* Top Indicator - Prominent standard font */}
+          <div className="relative z-10 mb-3">
+            <span className="text-sm sm:text-base font-normal text-[#e9f85b] tracking-wide font-sans">
+              Join the microgrid
+            </span>
+          </div>
+
+          {/* Center Main Headline - Matching Reservation Screen Editorial Style */}
+          <div className="relative z-10 max-w-lg my-auto py-8">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light text-[#f0f0e8] tracking-[-0.04em] leading-[1.06] mb-4">
+              Decentralized <br />
+              <em className="text-[#e9f85b] font-normal italic font-serif">solar power.</em>
             </h1>
-            <p className="text-xs text-slate-400 tracking-wide">
-              Decentralized Renewable Trading &amp; Energy Capacity Dispatch
+            <p className="text-sm sm:text-base text-[#92988d] font-light leading-relaxed">
+              Register your profile to book energy slots, inject power into regional nodes, or oversee grid operations.
             </p>
           </div>
-        </div>
 
-        {/* Step Transition Animation */}
-        <AnimatePresence mode="wait">
-          {step === 1 ? (
-            <motion.form
-              key="step-1"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.25 }}
-              onSubmit={handleInitiateRegistration}
-              className="space-y-4"
-            >
-              {/* 1. Operating Role Selection */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">
-                  1. Select Participation Role
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {REGISTRATION_ROLES.map((r) => {
-                    const Icon = r.icon;
-                    const isSelected = role === r.id;
-                    return (
+          {/* Bottom Simple Caption */}
+          <div className="relative z-10 text-xs text-[#666c63]">
+            Solis Microgrid Platform
+          </div>
+        </section>
+
+        {/* Right Column: Ultra-Minimal Registration Form */}
+        <section className="lg:col-span-6 flex flex-col justify-center p-6 sm:p-12 lg:p-16 bg-[#111410] relative overflow-y-auto">
+          <div className="max-w-md w-full mx-auto py-4">
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-2xl sm:text-3xl font-light text-[#f0f0e8] tracking-tight mb-1">
+                Create <em className="text-[#e9f85b] font-normal italic font-serif">account.</em>
+              </h2>
+              <p className="text-xs text-[#92988d]">
+                {step === 1 ? 'Enter your details to get started.' : 'Verify your email address.'}
+              </p>
+            </div>
+
+            {/* Step 1 Form */}
+            {step === 1 && (
+              <form onSubmit={handleInitiateRegistration} className="space-y-4">
+                {/* Role Pill Selector */}
+                <div>
+                  <label className="block text-xs font-medium text-[#92988d] mb-1.5">
+                    Account type
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ROLES.map((r) => {
+                      const Icon = r.icon;
+                      const isSelected = role === r.id;
+                      return (
+                        <button
+                          key={r.id}
+                          type="button"
+                          onClick={() => setRole(r.id)}
+                          className={`py-2 px-3 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                            isSelected
+                              ? 'bg-[#e9f85b] text-[#0b0d0b] border-[#e9f85b] font-medium shadow-sm'
+                              : 'bg-[#151914] text-[#92988d] border-[#2a2f27] hover:text-[#f0f0e8]'
+                          }`}
+                        >
+                          <Icon className="w-3.5 h-3.5" />
+                          <span>{r.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Name & NIC */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#92988d] mb-1">
+                      Full name
+                    </label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="Your name"
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#92988d] mb-1">
+                      NIC number
+                    </label>
+                    <div className="relative">
+                      <FileBadge className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="National ID"
+                        value={nic}
+                        onChange={(e) => setNic(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Email & Username */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#92988d] mb-1">
+                      Email address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="name@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-[#92988d] mb-1">
+                      Username
+                    </label>
+                    <div className="relative">
+                      <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="username"
+                        value={username}
+                        onChange={(e) => setUsername(e.target.value)}
+                        className="w-full pl-9 pr-3 py-2 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Password & Confirm */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-[#92988d] mb-1">
+                      Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        required
+                        placeholder="At least 6 chars"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-9 pr-9 py-2 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                      />
                       <button
-                        key={r.id}
                         type="button"
-                        onClick={() => setRole(r.id)}
-                        className={`p-3 rounded-2xl border text-left transition-all duration-200 flex flex-col justify-between ${
-                          isSelected
-                            ? `${r.borderActive} shadow-lg shadow-black/40`
-                            : 'border-white/5 bg-white/[0.02] hover:bg-white/[0.05] text-slate-400'
-                        }`}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666c63] hover:text-[#f0f0e8]"
                       >
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <Icon className={`w-4 h-4 ${isSelected ? r.accent : 'text-slate-400'}`} />
-                            {isSelected && <CheckCircle2 className={`w-3.5 h-3.5 ${r.accent}`} />}
-                          </div>
-                          <p className={`text-xs font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                            {r.label}
-                          </p>
-                          <p className="text-[9px] text-slate-500 leading-tight mt-1">
-                            {r.description}
-                          </p>
-                        </div>
-                        <div className="mt-2.5">
-                          <span className={`text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded border ${r.badgeColor}`}>
-                            {r.badge}
-                          </span>
-                        </div>
+                        {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                       </button>
-                    );
-                  })}
-                </div>
-              </div>
+                    </div>
+                  </div>
 
-              {/* Notice for Prosumer role */}
-              {role === 'Prosumer' && (
-                <div className="p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-200/90 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                  <span>
-                    <strong>Operator Approval Required:</strong> Prosumers are placed in Pending Approval status upon registration until verified by a Grid Operator.
-                  </span>
-                </div>
-              )}
-
-              {/* 2. Personal Information: Full Name & Username */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Full Name / Organization
-                  </label>
-                  <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Sanjitha Ranasinghe"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                    />
+                  <div>
+                    <label className="block text-xs font-medium text-[#92988d] mb-1">
+                      Confirm password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        required
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full pl-9 pr-9 py-2 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#666c63] hover:text-[#f0f0e8]"
+                      >
+                        {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Username (Login Identifier)
+                {/* Terms Agreement Checkbox */}
+                <div className="flex items-center gap-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="agreeTerms"
+                    checked={agreeTerms}
+                    onChange={(e) => setAgreeTerms(e.target.checked)}
+                    className="w-3.5 h-3.5 rounded bg-[#151914] border-[#2a2f27] text-[#e9f85b] cursor-pointer"
+                  />
+                  <label htmlFor="agreeTerms" className="text-xs text-[#92988d] cursor-pointer">
+                    I agree to the Solis Microgrid terms and conditions.
                   </label>
-                  <div className="relative">
-                    <AtSign className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. sanjitha_solar"
-                      value={username}
-                      onChange={(e) => setUsername(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. Email & NIC */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Email Address (for OTP Verification)
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="email"
-                      required
-                      placeholder="prosumer@solarmicrogrid.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                    />
-                  </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    NIC / Prosumer ID
-                  </label>
-                  <div className="relative">
-                    <FileBadge className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type="text"
-                      placeholder="e.g. 199812345678"
-                      value={nic}
-                      onChange={(e) => setNic(e.target.value)}
-                      className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                    />
-                  </div>
-                </div>
-              </div>
+                {/* Submit Button */}
+                <button
+                  type="submit"
+                  disabled={sendingOtp}
+                  className="w-full mt-3 py-3 px-4 rounded-xl text-xs font-medium text-[#0b0d0b] bg-[#e9f85b] hover:bg-[#d6e44b] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {sendingOtp ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#0b0d0b]" />
+                      <span>Sending verification code...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Continue</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            )}
 
-              {/* 4. Password & Confirm Password */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Min 6 characters"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Confirm Password
-                  </label>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                    <input
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      required
-                      placeholder="Repeat password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      className="w-full pl-10 pr-10 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                    >
-                      {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* 5. Region Select */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                  Connected Microgrid Hub
-                </label>
-                <div className="relative">
-                  <MapPin className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                  <select
-                    value={region}
-                    onChange={(e) => setRegion(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-[#15171E] border border-white/10 text-xs text-slate-200 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all"
-                  >
-                    {REGIONS.map((reg) => (
-                      <option key={reg} value={reg} className="bg-[#15171E] text-white">
-                        {reg}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* 6. Terms Checkbox */}
-              <div className="flex items-start gap-2.5 pt-1">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  checked={agreeTerms}
-                  onChange={(e) => setAgreeTerms(e.target.checked)}
-                  className="mt-0.5 rounded bg-white/10 border-white/20 text-[#FFD000] focus:ring-0 focus:ring-offset-0 cursor-pointer"
-                />
-                <label htmlFor="terms" className="text-[11px] text-slate-400 leading-snug cursor-pointer select-none">
-                  I agree to the Microgrid Grid Code interconnection rules, cryptographic dispatch verification, and privacy standards.
-                </label>
-              </div>
-
-              {/* Continue & Send OTP Button */}
-              <button
-                type="submit"
-                disabled={sendingOtp}
-                className="w-full yellow-pill-btn py-3.5 text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl shadow-[#FFD000]/20 disabled:opacity-50 mt-4"
+            {/* Step 2 Form: OTP Verification */}
+            {step === 2 && (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleCompleteRegistration();
+                }}
+                className="space-y-4"
               >
-                {sendingOtp ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                    <span>Sending Verification Passcode...</span>
-                  </>
-                ) : (
-                  <>
-                    <span>Continue &amp; Verify Email</span>
-                    <ArrowRight className="w-4 h-4 text-black" />
-                  </>
-                )}
-              </button>
-            </motion.form>
-          ) : (
-            <motion.div
-              key="step-2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.25 }}
-              className="space-y-6"
-            >
-              {/* Account Registration Summary */}
-              <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-[#FFD000] px-2 py-0.5 rounded-md bg-[#FFD000]/10 border border-[#FFD000]/20">
-                    Verify Email to Complete Registration
-                  </span>
+                <div className="p-3 rounded-xl bg-[#151914] border border-[#2a2f27] flex items-center justify-between text-xs">
+                  <div className="text-[#92988d]">
+                    Code sent to: <span className="text-[#f0f0e8] font-medium">{email}</span>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => setStep(1)}
-                    className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+                    onClick={() => {
+                      setStep(1);
+                      setOtp(['', '', '', '', '', '']);
+                    }}
+                    className="text-[#e9f85b] hover:underline"
                   >
-                    <Edit2 className="w-3 h-3" />
-                    Edit Details
+                    Change
                   </button>
                 </div>
+
                 <div>
-                  <p className="text-sm font-bold text-white">{fullName || 'Participant'}</p>
-                  <p className="text-xs text-slate-300 font-mono mt-0.5">
-                    {email} &bull; <span className="text-[#FFD000]">@{username}</span>
-                  </p>
-                  <div className="flex flex-wrap gap-2 text-[10px] text-slate-400 mt-2">
-                    <span className="px-2 py-0.5 rounded bg-white/5 border border-white/10">
-                      Role: <strong className="text-white">{role}</strong>
-                    </span>
-                    {role === 'Prosumer' && (
-                      <span className="px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 text-amber-300 font-semibold">
-                        Awaiting Operator Approval After Verification
-                      </span>
-                    )}
+                  <label className="block text-xs font-medium text-[#92988d] mb-2">
+                    Enter 6-digit code
+                  </label>
+                  <div className="flex gap-2 justify-between" onPaste={handlePaste}>
+                    {otp.map((digit, idx) => (
+                      <input
+                        key={idx}
+                        ref={(el) => (otpInputsRef.current[idx] = el)}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleOtpChange(idx, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(idx, e)}
+                        className="w-11 sm:w-12 h-12 text-center text-lg font-bold font-mono rounded-xl bg-[#151914] border border-[#2a2f27] text-[#e9f85b] focus:border-[#e9f85b] focus:outline-none transition-all"
+                      />
+                    ))}
                   </div>
                 </div>
-              </div>
 
-              {/* 6-Digit Passcode Input */}
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-3 text-center">
-                  Enter 6-Digit Passcode Sent to Your Email
-                </label>
-                <div
-                  className="flex items-center justify-center gap-2 sm:gap-3"
-                  onPaste={handlePaste}
-                >
-                  {otp.map((digit, idx) => (
-                    <input
-                      key={idx}
-                      ref={(el) => (otpInputsRef.current[idx] = el)}
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={1}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(idx, e.target.value)}
-                      onKeyDown={(e) => handleKeyDown(idx, e)}
-                      className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-xl font-mono font-black rounded-2xl bg-white/[0.04] border text-white focus:outline-none transition-all ${
-                        digit
-                          ? 'border-[#FFD000] bg-[#FFD000]/10 shadow-lg shadow-[#FFD000]/10 text-[#FFD000]'
-                          : 'border-white/15 focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40'
-                      }`}
-                    />
-                  ))}
-                </div>
-                {attemptsRemaining !== null && (
-                  <p className="text-center text-[11px] text-slate-400 mt-2.5">
-                    Security Token: {attemptsRemaining} attempt(s) remaining.
-                  </p>
-                )}
-              </div>
-
-              {/* Complete Registration Button */}
-              <button
-                type="button"
-                onClick={() => handleCompleteRegistration()}
-                disabled={verifying || otp.some((d) => !d)}
-                className="w-full yellow-pill-btn py-3.5 text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl shadow-[#FFD000]/20 disabled:opacity-40"
-              >
-                {verifying ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                    <span>Verifying &amp; Creating Account...</span>
-                  </>
-                ) : (
-                  <>
-                    <KeyRound className="w-4 h-4 text-black" />
-                    <span>Verify Passcode &amp; Complete Registration</span>
-                  </>
-                )}
-              </button>
-
-              {/* Cooldown & Resend Actions */}
-              <div className="flex items-center justify-between text-xs pt-2">
                 <button
-                  type="button"
-                  onClick={() => setStep(1)}
-                  className="text-slate-400 hover:text-white transition-colors"
+                  type="submit"
+                  disabled={verifying || otp.join('').length !== 6}
+                  className="w-full py-3 px-4 rounded-xl text-xs font-medium text-[#0b0d0b] bg-[#e9f85b] hover:bg-[#d6e44b] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                 >
-                  &larr; Back to Details
+                  {verifying ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-[#0b0d0b]" />
+                      <span>Verifying...</span>
+                    </>
+                  ) : (
+                    <span>Complete registration</span>
+                  )}
                 </button>
 
-                {cooldown > 0 ? (
-                  <span className="text-slate-500 font-medium">
-                    Resend code in <strong className="text-slate-300">{cooldown}s</strong>
-                  </span>
-                ) : (
+                <div className="text-center pt-1 text-xs">
                   <button
                     type="button"
-                    onClick={(e) => handleInitiateRegistration(e)}
-                    disabled={sendingOtp}
-                    className="text-[#FFD000] hover:text-yellow-300 font-bold transition-colors flex items-center gap-1"
+                    onClick={handleInitiateRegistration}
+                    disabled={cooldown > 0 || sendingOtp}
+                    className="text-[#92988d] hover:text-[#f0f0e8] disabled:opacity-40"
                   >
-                    <RefreshCw className={`w-3 h-3 ${sendingOtp ? 'animate-spin' : ''}`} />
-                    Resend Passcode
+                    {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
                   </button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </div>
+              </form>
+            )}
 
-        {/* Link to Login */}
-        <div className="mt-6 pt-5 border-t border-white/[0.08] text-center">
-          <p className="text-xs text-slate-400">
-            Already have a microgrid account?{' '}
-            <Link
-              to="/login"
-              className="text-[#FFD000] hover:text-yellow-300 font-bold transition-colors ml-1 inline-flex items-center gap-1"
-            >
-              <span>Sign In with Email or Username</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </p>
-        </div>
-      </motion.div>
+            {/* Footer */}
+            <div className="mt-8 pt-6 border-t border-[#2a2f27] text-xs flex items-center justify-between">
+              <span className="text-[#92988d]">Already registered?</span>
+              <Link to="/login" className="font-semibold text-[#e9f85b] hover:underline no-underline">
+                Sign in →
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

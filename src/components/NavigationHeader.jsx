@@ -22,9 +22,6 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
   };
 
   const isActive = (path) => {
-    if (path === '/reservations') {
-      return location.pathname === '/' || location.pathname === '/reservations';
-    }
     return location.pathname.startsWith(path);
   };
 
@@ -53,18 +50,12 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
         >
           Solar nodes
         </Link>
-        <Link
-          to="/scan"
-          className={isActive('/scan') ? 'is-current' : ''}
-        >
-          Verify pass
-        </Link>
-        {isAdmin && (
+        {(isAdmin || userRole === 'gridoperator') && (
           <Link
-            to="/admin/approvals"
-            className={isActive('/admin') ? 'is-current' : ''}
+            to="/scan"
+            className={isActive('/scan') ? 'is-current' : ''}
           >
-            Prosumer approvals
+            Verify pass
           </Link>
         )}
       </nav>
