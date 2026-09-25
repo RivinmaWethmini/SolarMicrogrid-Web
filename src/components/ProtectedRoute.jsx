@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ allowedRoles, children }) {
+export default function ProtectedRoute({ allowedRoles, requireApproval = false, children }) {
   const { user, loading, isAuthenticated, logout, refreshProfile } = useAuth();
   const location = useLocation();
   const [checkingStatus, setCheckingStatus] = useState(false);
@@ -85,7 +85,7 @@ export default function ProtectedRoute({ allowedRoles, children }) {
       }
     };
 
-    if (isPending) {
+    if (isPending && requireApproval) {
       return (
         <div className="min-h-screen bg-[#08090C] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
           {/* Ambient Amber Lighting */}

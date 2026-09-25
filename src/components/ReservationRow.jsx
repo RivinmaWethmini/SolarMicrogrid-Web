@@ -93,6 +93,7 @@ export default function ReservationRow({
   const isPending = statusKey === 'pending';
   const isApproved = statusKey === 'approved';
   const isAdmin = userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'gridoperator';
+  const isLoading = loadingId === rowId;
 
   const rowVariants = {
     hidden: { opacity: 0, y: 8 },
