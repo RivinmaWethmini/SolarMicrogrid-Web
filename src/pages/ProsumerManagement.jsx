@@ -9,14 +9,28 @@ import {
   Zap,
   BatteryCharging,
   ArrowLeft,
+  Plus,
 } from 'lucide-react';
 
 import ProsumerRow from '../components/ProsumerRow';
 import {
   getProsumers,
+  createProsumer,
+  updateProsumer,
   deactivateProsumer,
   reactivateProsumer,
 } from '../services/prosumerApi';
+
+const emptyForm = {
+  nic: '',
+  name: '',
+  solarCapacityKw: '',
+  batteryCapacityKwh: '',
+  availableEnergyKw: '',
+  pricePerKwh: '',
+  location: '',
+  microgridNodeId: '',
+};
 
 function getErrorMessage(error, fallback) {
   const data = error?.response?.data;
@@ -42,7 +56,13 @@ function getErrorMessage(error, fallback) {
 
 export default function ProsumerManagement() {
   const [prosumers, setProsumers] = useState([]);
+  const [form, setForm] = useState(emptyForm);
+
+  const [editingProsumer, setEditingProsumer] = useState(null);
+
   const [isLoadingList, setIsLoadingList] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
   const [loadingId, setLoadingId] = useState(null);
 
   const [errorMsg, setErrorMsg] = useState('');
@@ -80,13 +100,107 @@ export default function ProsumerManagement() {
     setSuccessMsg('');
   }
 
+  function handleFormChange(event) {
+    const { name, value } = event.target;
+
+    setForm((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    clearMessages();
+
+    if (!form.nic.trim()) {
+      setErrorMsg('NIC is required.');
+      return;
+    }
+
+    if (!form.name.trim()) {
+      setErrorMsg('Name is required.');
+      return;
+    }
+
+    if (!form.location.trim()) {
+      setErrorMsg('Location is required.');
+      return;
+    }
+
+    if (
+      form.solarCapacityKw === '' ||
+      Number(form.solarCapacityKw) < 0
+    ) {
+      setErrorMsg('Solar capacity must be zero or greater.');
+      return;
+    }
+
+    if (
+      form.batteryCapacityKwh === '' ||
+      Number(form.batteryCapacityKwh) < 0
+    ) {
+      setErrorMsg('Battery capacity must be zero or greater.');
+      return;
+    }
+
+    if (
+      form.availableEnergyKw === '' ||
+      Number(form.availableEnergyKw) < 0
+    ) {
+      setErrorMsg('Available energy must be zero or greater.');
+      return;
+    }
+
+    if (
+      form.pricePerKwh === '' ||
+      Number(form.pricePerKwh) < 0
+    ) {
+      setErrorMsg('Price per kWh must be zero or greater.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const payload = {
+        nic: form.nic.trim(),
+        name: form.name.trim(),
+        solarCapacityKw: Number(form.solarCapacityKw),
+        batteryCapacityKwh: Number(form.batteryCapacityKwh),
+        availableEnergyKw: Number(form.availableEnergyKw),
+        pricePerKwh: Number(form.pricePerKwh),
+        location: form.location.trim(),
+        microgridNodeId: form.microgridNodeId.trim() || null,
+      };
+
+      await createProsumer(payload);
+
+      setForm(emptyForm);
+      setSuccessMsg('Prosumer registered successfully.');
+
+      await fetchProsumers(false);
+    } catch (error) {
+      setErrorMsg(
+        getErrorMessage(
+          error,
+          'Failed to register the prosumer.'
+        )
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   async function handleDeactivate(nic) {
     clearMessages();
     setLoadingId(nic);
 
     try {
       await deactivateProsumer(nic);
+
       setSuccessMsg('Prosumer deactivated successfully.');
+
       await fetchProsumers(false);
     } catch (error) {
       setErrorMsg(
@@ -106,7 +220,9 @@ export default function ProsumerManagement() {
 
     try {
       await reactivateProsumer(nic);
+
       setSuccessMsg('Prosumer reactivated successfully.');
+
       await fetchProsumers(false);
     } catch (error) {
       setErrorMsg(
@@ -121,7 +237,101 @@ export default function ProsumerManagement() {
   }
 
   function handleEdit(prosumer) {
-    console.log('Edit prosumer:', prosumer);
+    clearMessages();
+
+    setEditingProsumer({
+      nic: prosumer.nic,
+      name: prosumer.name || '',
+      solarCapacityKw: prosumer.solarCapacityKw ?? '',
+      batteryCapacityKwh: prosumer.batteryCapacityKwh ?? '',
+      availableEnergyKw: prosumer.availableEnergyKw ?? '',
+      pricePerKwh: prosumer.pricePerKwh ?? '',
+      location: prosumer.location || '',
+      microgridNodeId: prosumer.microgridNodeId || '',
+    });
+  }
+
+  async function handleUpdate(event) {
+    event.preventDefault();
+    clearMessages();
+
+    if (!editingProsumer) {
+      return;
+    }
+
+    if (!editingProsumer.name.trim()) {
+      setErrorMsg('Name is required.');
+      return;
+    }
+
+    if (!editingProsumer.location.trim()) {
+      setErrorMsg('Location is required.');
+      return;
+    }
+
+    if (
+      editingProsumer.solarCapacityKw === '' ||
+      Number(editingProsumer.solarCapacityKw) < 0
+    ) {
+      setErrorMsg('Solar capacity must be zero or greater.');
+      return;
+    }
+
+    if (
+      editingProsumer.batteryCapacityKwh === '' ||
+      Number(editingProsumer.batteryCapacityKwh) < 0
+    ) {
+      setErrorMsg('Battery capacity must be zero or greater.');
+      return;
+    }
+
+    if (
+      editingProsumer.availableEnergyKw === '' ||
+      Number(editingProsumer.availableEnergyKw) < 0
+    ) {
+      setErrorMsg('Available energy must be zero or greater.');
+      return;
+    }
+
+    if (
+      editingProsumer.pricePerKwh === '' ||
+      Number(editingProsumer.pricePerKwh) < 0
+    ) {
+      setErrorMsg('Price per kWh must be zero or greater.');
+      return;
+    }
+
+    setIsUpdating(true);
+
+    try {
+      const payload = {
+        nic: editingProsumer.nic,
+        name: editingProsumer.name.trim(),
+        solarCapacityKw: Number(editingProsumer.solarCapacityKw),
+        batteryCapacityKwh: Number(editingProsumer.batteryCapacityKwh),
+        availableEnergyKw: Number(editingProsumer.availableEnergyKw),
+        pricePerKwh: Number(editingProsumer.pricePerKwh),
+        location: editingProsumer.location.trim(),
+        microgridNodeId:
+          editingProsumer.microgridNodeId.trim() || null,
+      };
+
+      await updateProsumer(editingProsumer.nic, payload);
+
+      setEditingProsumer(null);
+      setSuccessMsg('Prosumer updated successfully.');
+
+      await fetchProsumers(false);
+    } catch (error) {
+      setErrorMsg(
+        getErrorMessage(
+          error,
+          'Failed to update the prosumer.'
+        )
+      );
+    } finally {
+      setIsUpdating(false);
+    }
   }
 
   const activeCount = prosumers.filter(
@@ -261,7 +471,223 @@ export default function ProsumerManagement() {
           )}
         </AnimatePresence>
 
-        {/* Prosumer table */}
+        {/* Register New Prosumer */}
+        <motion.form
+          onSubmit={handleSubmit}
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="node-card p-6 sm:p-8"
+        >
+          <div className="mb-6">
+            <h2 className="text-xl font-bold text-slate-900">
+              Register New Prosumer
+            </h2>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Enter the prosumer information below.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+
+            {/* NIC */}
+            <div>
+              <label
+                htmlFor="nic"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                NIC
+              </label>
+
+              <input
+                id="nic"
+                type="text"
+                name="nic"
+                value={form.nic}
+                onChange={handleFormChange}
+                placeholder="199812345678"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Name */}
+            <div>
+              <label
+                htmlFor="name"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Name
+              </label>
+
+              <input
+                id="name"
+                type="text"
+                name="name"
+                value={form.name}
+                onChange={handleFormChange}
+                placeholder="John Perera"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Solar Capacity */}
+            <div>
+              <label
+                htmlFor="solarCapacityKw"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Solar Capacity (kW)
+              </label>
+
+              <input
+                id="solarCapacityKw"
+                type="number"
+                name="solarCapacityKw"
+                value={form.solarCapacityKw}
+                onChange={handleFormChange}
+                min="0"
+                step="any"
+                placeholder="5"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Battery Capacity */}
+            <div>
+              <label
+                htmlFor="batteryCapacityKwh"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Battery Capacity (kWh)
+              </label>
+
+              <input
+                id="batteryCapacityKwh"
+                type="number"
+                name="batteryCapacityKwh"
+                value={form.batteryCapacityKwh}
+                onChange={handleFormChange}
+                min="0"
+                step="any"
+                placeholder="10"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Available Energy */}
+            <div>
+              <label
+                htmlFor="availableEnergyKw"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Available Energy (kW)
+              </label>
+
+              <input
+                id="availableEnergyKw"
+                type="number"
+                name="availableEnergyKw"
+                value={form.availableEnergyKw}
+                onChange={handleFormChange}
+                min="0"
+                step="any"
+                placeholder="0"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Price */}
+            <div>
+              <label
+                htmlFor="pricePerKwh"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Price per kWh
+              </label>
+
+              <input
+                id="pricePerKwh"
+                type="number"
+                name="pricePerKwh"
+                value={form.pricePerKwh}
+                onChange={handleFormChange}
+                min="0"
+                step="0.01"
+                placeholder="50"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Location */}
+            <div>
+              <label
+                htmlFor="location"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Location
+              </label>
+
+              <input
+                id="location"
+                type="text"
+                name="location"
+                value={form.location}
+                onChange={handleFormChange}
+                placeholder="Nugegoda"
+                className="node-input"
+                required
+              />
+            </div>
+
+            {/* Microgrid Node */}
+            <div>
+              <label
+                htmlFor="microgridNodeId"
+                className="mb-2 block text-sm font-semibold text-slate-700"
+              >
+                Microgrid Node ID
+              </label>
+
+              <input
+                id="microgridNodeId"
+                type="text"
+                name="microgridNodeId"
+                value={form.microgridNodeId}
+                onChange={handleFormChange}
+                placeholder="Optional"
+                className="node-input"
+              />
+            </div>
+          </div>
+
+          <div className="mt-7 flex justify-end">
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className="primary-btn"
+            >
+              {isSubmitting ? (
+                <>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  Registering
+                </>
+              ) : (
+                <>
+                  <Plus className="h-4 w-4" />
+                  Register Prosumer
+                </>
+              )}
+            </button>
+          </div>
+        </motion.form>
+
+        {/* Registered Prosumers */}
         <section className="node-card overflow-hidden">
           <div className="border-b border-slate-200 px-6 py-5">
             <h2 className="text-xl font-bold text-slate-900">
@@ -331,6 +757,245 @@ export default function ProsumerManagement() {
             </table>
           </div>
         </section>
+
+        {/* Edit Prosumer Modal */}
+        <AnimatePresence>
+          {editingProsumer && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 10 }}
+                className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+              >
+                <div className="mb-6 flex items-start justify-between">
+                  <div>
+                    <h2 className="text-xl font-bold text-slate-900">
+                      Edit Prosumer
+                    </h2>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Update the prosumer profile information.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setEditingProsumer(null)}
+                    disabled={isUpdating}
+                    aria-label="Close edit modal"
+                    className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleUpdate}>
+                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+
+                    {/* NIC */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        NIC
+                      </label>
+
+                      <input
+                        type="text"
+                        value={editingProsumer.nic}
+                        disabled
+                        className="node-input bg-slate-100"
+                      />
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        NIC cannot be changed.
+                      </p>
+                    </div>
+
+                    {/* Name */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Name
+                      </label>
+
+                      <input
+                        type="text"
+                        value={editingProsumer.name}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            name: event.target.value,
+                          }))
+                        }
+                        className="node-input"
+                        required
+                      />
+                    </div>
+
+                    {/* Solar */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Solar Capacity (kW)
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editingProsumer.solarCapacityKw}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            solarCapacityKw: event.target.value,
+                          }))
+                        }
+                        className="node-input"
+                        required
+                      />
+                    </div>
+
+                    {/* Battery */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Battery Capacity (kWh)
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editingProsumer.batteryCapacityKwh}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            batteryCapacityKwh: event.target.value,
+                          }))
+                        }
+                        className="node-input"
+                        required
+                      />
+                    </div>
+
+                    {/* Available Energy */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Available Energy (kW)
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        value={editingProsumer.availableEnergyKw}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            availableEnergyKw: event.target.value,
+                          }))
+                        }
+                        className="node-input"
+                        required
+                      />
+                    </div>
+
+                    {/* Price */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Price per kWh
+                      </label>
+
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={editingProsumer.pricePerKwh}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            pricePerKwh: event.target.value,
+                          }))
+                        }
+                        className="node-input"
+                        required
+                      />
+                    </div>
+
+                    {/* Location */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Location
+                      </label>
+
+                      <input
+                        type="text"
+                        value={editingProsumer.location}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            location: event.target.value,
+                          }))
+                        }
+                        className="node-input"
+                        required
+                      />
+                    </div>
+
+                    {/* Microgrid Node */}
+                    <div>
+                      <label className="mb-2 block text-sm font-semibold text-slate-700">
+                        Microgrid Node ID
+                      </label>
+
+                      <input
+                        type="text"
+                        value={editingProsumer.microgridNodeId}
+                        onChange={(event) =>
+                          setEditingProsumer((previous) => ({
+                            ...previous,
+                            microgridNodeId: event.target.value,
+                          }))
+                        }
+                        placeholder="Optional"
+                        className="node-input"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="mt-7 flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setEditingProsumer(null)}
+                      disabled={isUpdating}
+                      className="secondary-btn"
+                    >
+                      Cancel
+                    </button>
+
+                    <button
+                      type="submit"
+                      disabled={isUpdating}
+                      className="primary-btn"
+                    >
+                      {isUpdating ? (
+                        <>
+                          <LoaderCircle className="h-4 w-4 animate-spin" />
+                          Saving
+                        </>
+                      ) : (
+                        'Save Changes'
+                      )}
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </main>
   );
