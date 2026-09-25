@@ -143,9 +143,9 @@ function StatCard({ label, value, theme, icon, delay, subtitle }) {
       <div className="flex items-center justify-between">
         <div>
           <p className={`text-3xl font-black tracking-tight leading-none ${valueClass}`}>{value}</p>
-          <p className={`text-[11px] tracking-wider uppercase mt-2 font-bold ${labelClass}`}>{label}</p>
+          <p className={`text-xs mt-2 font-bold ${labelClass}`}>{label}</p>
           {subtitle && (
-            <p className={`text-[10px] font-medium mt-0.5 ${subClass}`}>{subtitle}</p>
+            <p className={`text-[11px] font-medium mt-0.5 ${subClass}`}>{subtitle}</p>
           )}
         </div>
         <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${iconClass}`}>
@@ -265,7 +265,7 @@ function QrModal({ reservation, onClose }) {
         {payload && (
           <div className="bg-black/60 rounded-2xl p-3.5 border border-white/10 text-left">
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Cryptographic Token</span>
+              <span className="text-xs font-semibold text-slate-400">Cryptographic Token</span>
               <button
                 onClick={handleCopy}
                 className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors"
@@ -283,7 +283,7 @@ function QrModal({ reservation, onClose }) {
         <div className="mt-6 flex justify-end">
           <button
             onClick={onClose}
-            className="w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-[#0A0A0C] font-black text-xs tracking-wider uppercase shadow-lg shadow-[#FFD000]/20 transition-all"
+            className="w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-[#0A0A0C] font-bold text-sm shadow-lg shadow-[#FFD000]/20 transition-all"
           >
             Close Viewer
           </button>
@@ -447,8 +447,8 @@ export default function ReservationDashboard() {
                 <h1 className="text-3xl font-black text-white tracking-tight leading-none">
                   Grid Operator Portal
                 </h1>
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[10px] font-bold uppercase tracking-wider">
-                  <ShieldCheck className="w-3 h-3" />
+                <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-xs font-semibold">
+                  <ShieldCheck className="w-3.5 h-3.5" />
                   Live Operator
                 </span>
               </div>
@@ -612,7 +612,7 @@ export default function ReservationDashboard() {
                     {TABLE_HEADERS.map((h) => (
                       <th
                         key={h}
-                        className="px-6 py-4 text-[11px] font-bold text-slate-400 tracking-wider uppercase"
+                        className="px-6 py-4 text-xs font-bold text-slate-400"
                       >
                         {h}
                       </th>

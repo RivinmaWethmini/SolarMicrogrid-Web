@@ -219,7 +219,7 @@ export default function QrScannerPage() {
               {loading && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-20">
                   <LoaderCircle className="w-8 h-8 text-[#FFD000] animate-spin" />
-                  <p className="text-xs font-bold text-white tracking-wider uppercase">
+                  <p className="text-xs font-semibold text-white">
                     Verifying with SolarAPI...
                   </p>
                 </div>
@@ -248,7 +248,7 @@ export default function QrScannerPage() {
         {/* Manual Payload Input Tab */}
         {activeTab === 'manual' && !result && (
           <div className="w-full max-w-lg p-6 rounded-3xl bg-[#18191E] border border-white/10 shadow-xl">
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+            <label className="block text-xs font-semibold text-slate-300 mb-2">
               Raw Scanned QR JSON Payload
             </label>
             <textarea
@@ -261,7 +261,7 @@ export default function QrScannerPage() {
             <button
               onClick={() => handleVerifyPayload(manualPayload)}
               disabled={loading || !manualPayload.trim()}
-              className="mt-4 w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black font-black text-xs uppercase tracking-wider transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#FFD000]/10"
+              className="mt-4 w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-lg shadow-[#FFD000]/10"
             >
               {loading ? (
                 <>
@@ -300,19 +300,19 @@ export default function QrScannerPage() {
               )}
               <div>
                 <span
-                  className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-widest ${
+                  className={`flex items-center gap-1.5 text-xs font-bold ${
                     result.success ? 'text-[#10B981]' : 'text-[#EF4444]'
                   }`}
                 >
                   {result.success ? (
                     <>
                       <CircleCheck className="w-3.5 h-3.5" />
-                      DISPATCH AUTHORIZED
+                      Dispatch Authorized
                     </>
                   ) : (
                     <>
                       <CircleX className="w-3.5 h-3.5" />
-                      VERIFICATION FAILED
+                      Verification Failed
                     </>
                   )}
                 </span>
@@ -333,7 +333,7 @@ export default function QrScannerPage() {
             {result.success && result.data && (
               <div className="grid grid-cols-2 gap-3 mb-6">
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
                     <User className="w-3 h-3 text-[#FFD000]" />
                     Prosumer NIC
                   </div>
@@ -343,7 +343,7 @@ export default function QrScannerPage() {
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
                     <Network className="w-3 h-3 text-[#FFD000]" />
                     Microgrid Node
                   </div>
@@ -353,7 +353,7 @@ export default function QrScannerPage() {
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
                     <Zap className="w-3 h-3 text-[#FFD000]" />
                     Authorized Energy
                   </div>
@@ -363,7 +363,7 @@ export default function QrScannerPage() {
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5">
-                  <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-1.5 text-slate-400 text-xs font-medium mb-1">
                     <CalendarDays className="w-3 h-3 text-[#FFD000]" />
                     Dispatched At
                   </div>
@@ -384,7 +384,7 @@ export default function QrScannerPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={resetAndScanNext}
-                className="flex-1 py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-[#FFD000]/15 flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black font-bold text-sm transition-all shadow-lg shadow-[#FFD000]/15 flex items-center justify-center gap-2"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Scan Next QR Code
