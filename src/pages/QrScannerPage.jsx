@@ -1,19 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Html5Qrcode } from 'html5-qrcode';
-import { 
-  Camera, 
-  ShieldCheck, 
-  AlertTriangle, 
-  ArrowLeft, 
-  RefreshCw, 
-  CheckCircle2, 
-  XCircle, 
-  Zap, 
-  Cpu, 
-  User, 
-  Calendar,
-  Layers
+import {
+  Camera,
+  ShieldCheck,
+  AlertTriangle,
+  ArrowLeft,
+  RefreshCw,
+  LoaderCircle,
+  CircleCheck,
+  CircleX,
+  Zap,
+  Network,
+  User,
+  CalendarDays,
+  Layers,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -21,7 +22,7 @@ import api from '../services/api';
  * React Web Operator QR Dispatch Scanner
  * Scans prosumer QR pass via web browser camera, validates cryptographic token
  * against SolarAPI (POST /api/qr/verify), and displays dispatch authorization.
- * 
+ *
  * Author: Member 4 (Energy Reservation & QR Dispatch)
  */
 export default function QrScannerPage() {
@@ -32,7 +33,7 @@ export default function QrScannerPage() {
   const [cameraError, setCameraError] = useState('');
   const [manualPayload, setManualPayload] = useState('');
   const [activeTab, setActiveTab] = useState('camera'); // 'camera' | 'manual'
-  
+
   const html5QrCodeRef = useRef(null);
 
   // Initialize and start camera scanner
@@ -40,7 +41,7 @@ export default function QrScannerPage() {
     try {
       setCameraError('');
       setResult(null);
-      
+
       const qrRegionId = 'qr-reader-viewport';
       if (!html5QrCodeRef.current) {
         html5QrCodeRef.current = new Html5Qrcode(qrRegionId);
@@ -180,7 +181,7 @@ export default function QrScannerPage() {
             Verify Energy Dispatch Pass
           </h2>
           <p className="text-slate-400 text-sm max-w-lg mx-auto">
-            Scan a prosumer’s cryptographic QR pass to authorize energy transfer and prevent fraudulent or duplicate dispatches.
+            Scan a prosumer's cryptographic QR pass to authorize energy transfer and prevent fraudulent or duplicate dispatches.
           </p>
         </div>
 
@@ -217,7 +218,7 @@ export default function QrScannerPage() {
               <div id="qr-reader-viewport" className="w-full h-full" />
               {loading && (
                 <div className="absolute inset-0 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 z-20">
-                  <RefreshCw className="w-8 h-8 text-[#FFD000] animate-spin" />
+                  <LoaderCircle className="w-8 h-8 text-[#FFD000] animate-spin" />
                   <p className="text-xs font-bold text-white tracking-wider uppercase">
                     Verifying with SolarAPI...
                   </p>
@@ -264,7 +265,7 @@ export default function QrScannerPage() {
             >
               {loading ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" />
+                  <LoaderCircle className="w-4 h-4 animate-spin" />
                   Verifying...
                 </>
               ) : (
@@ -290,20 +291,30 @@ export default function QrScannerPage() {
             <div className="flex items-center gap-3 mb-4">
               {result.success ? (
                 <div className="w-12 h-12 rounded-2xl bg-[#10B981]/20 flex items-center justify-center text-[#10B981] border border-[#10B981]/30">
-                  <CheckCircle2 className="w-6 h-6" />
+                  <CircleCheck className="w-6 h-6" />
                 </div>
               ) : (
                 <div className="w-12 h-12 rounded-2xl bg-[#EF4444]/20 flex items-center justify-center text-[#EF4444] border border-[#EF4444]/30">
-                  <XCircle className="w-6 h-6" />
+                  <CircleX className="w-6 h-6" />
                 </div>
               )}
               <div>
                 <span
-                  className={`text-xs font-black uppercase tracking-widest ${
+                  className={`flex items-center gap-1.5 text-xs font-black uppercase tracking-widest ${
                     result.success ? 'text-[#10B981]' : 'text-[#EF4444]'
                   }`}
                 >
-                  {result.success ? '✓ DISPATCH AUTHORIZED' : '✗ VERIFICATION FAILED'}
+                  {result.success ? (
+                    <>
+                      <CircleCheck className="w-3.5 h-3.5" />
+                      DISPATCH AUTHORIZED
+                    </>
+                  ) : (
+                    <>
+                      <CircleX className="w-3.5 h-3.5" />
+                      VERIFICATION FAILED
+                    </>
+                  )}
                 </span>
                 <h3 className="text-xl font-bold text-white tracking-tight">
                   {result.success
@@ -333,7 +344,7 @@ export default function QrScannerPage() {
 
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5">
                   <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-                    <Cpu className="w-3 h-3 text-[#FFD000]" />
+                    <Network className="w-3 h-3 text-[#FFD000]" />
                     Microgrid Node
                   </div>
                   <div className="text-sm font-bold text-white font-mono">
@@ -353,7 +364,7 @@ export default function QrScannerPage() {
 
                 <div className="p-3.5 rounded-2xl bg-black/40 border border-white/5">
                   <div className="flex items-center gap-1.5 text-slate-400 text-[10px] font-bold uppercase tracking-wider mb-1">
-                    <Calendar className="w-3 h-3 text-[#FFD000]" />
+                    <CalendarDays className="w-3 h-3 text-[#FFD000]" />
                     Dispatched At
                   </div>
                   <div className="text-[11px] font-bold text-white">

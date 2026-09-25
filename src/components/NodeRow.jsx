@@ -1,4 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion';
+import { MapPin, Pencil, PowerOff, Power, LoaderCircle } from 'lucide-react';
 
 const statusStyles = {
   active: {
@@ -87,26 +88,7 @@ export default function NodeRow({
 
       <td className="whitespace-nowrap px-5 py-5">
         <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700">
-          <svg
-            className="h-3.5 w-3.5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M17.657 16.657L13.414 20.9a2 2 0 01-2.828 0l-4.243-4.243a8 8 0 1111.314 0z"
-            />
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-            />
-          </svg>
-
+          <MapPin className="h-3.5 w-3.5" />
           {formatCoordinate(node.latitude)},{' '}
           {formatCoordinate(node.longitude)}
         </span>
@@ -144,7 +126,7 @@ export default function NodeRow({
               exit={{ opacity: 0 }}
               className="flex items-center gap-2 text-xs font-semibold text-slate-500"
             >
-              <span className="loading-spinner" />
+              <LoaderCircle className="h-4 w-4 animate-spin text-slate-400" />
               Processing
             </motion.div>
           ) : (
@@ -159,19 +141,7 @@ export default function NodeRow({
                 onClick={() => onEdit(node)}
                 className="edit-btn"
               >
-                <svg
-                  className="h-4 w-4"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                  />
-                </svg>
+                <Pencil className="h-4 w-4" />
                 Edit
               </button>
 
@@ -181,19 +151,7 @@ export default function NodeRow({
                   onClick={() => onDeactivate(rowId)}
                   className="deactivate-btn"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M18.36 6.64a9 9 0 11-12.73 0M12 2v10"
-                    />
-                  </svg>
+                  <PowerOff className="h-4 w-4" />
                   Deactivate
                 </button>
               ) : (
@@ -202,19 +160,7 @@ export default function NodeRow({
                   onClick={() => onReactivate(rowId)}
                   className="reactivate-btn"
                 >
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
+                  <Power className="h-4 w-4" />
                   Reactivate
                 </button>
               )}

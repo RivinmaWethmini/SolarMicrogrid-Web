@@ -2,7 +2,24 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
+import {
+  RefreshCw,
+  QrCode,
+  X,
+  Copy,
+  Check,
+  AlertCircle,
+  Zap,
+  ShieldCheck,
+  CalendarDays,
+  CalendarClock,
+  CalendarCheck,
+  CircleX,
+  TrendingUp,
+  Search,
+  Network,
+  CircleCheck,
+} from 'lucide-react';
 import api from '../services/api';
 import ReservationRow from '../components/ReservationRow';
 import emptyStateSvg from '../assets/images/empty-state.svg';
@@ -66,8 +83,9 @@ function ErrorState({ message, onRetry }) {
       <p className="text-slate-400 text-xs mb-5">Ensure Central Microgrid API is active on port 5298 and database is connected.</p>
       <button
         onClick={onRetry}
-        className="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-full border border-white/15 transition-all shadow-md"
+        className="flex items-center gap-2 px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-full border border-white/15 transition-all shadow-md"
       >
+        <RefreshCw className="w-4 h-4" />
         Retry Connection
       </button>
     </div>
@@ -349,7 +367,9 @@ export default function ReservationDashboard() {
     try {
       await api.put(`/reservations/${id}/${actionEndpoint}`);
       toast.success(`Reservation ${status}!`, {
-        icon: status === 'Approved' ? '✅' : '❌',
+        icon: status === 'Approved'
+          ? <CircleCheck className="w-5 h-5 text-emerald-400" />
+          : <CircleX className="w-5 h-5 text-red-400" />,
       });
       await fetchReservationsAndStats();
     } catch (err) {
@@ -430,6 +450,7 @@ export default function ReservationDashboard() {
               to="/nodes"
               className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all shadow-md"
             >
+              <Network className="w-3.5 h-3.5" />
               Solar Nodes
             </Link>
             <Link
@@ -454,68 +475,52 @@ export default function ReservationDashboard() {
           </div>
         </div>
 
-        {/* 5 Stat Cards - Yellow & Black High Contrast Theme */}
+        {/* 5 Stat Cards — Yellow & Black High Contrast Theme */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
-          {/* Card 1: Total Bookings (Cream Contrast Card) */}
+          {/* Card 1: Total Bookings */}
           <StatCard
             label="Total Bookings"
             value={loading ? '…' : stats.total}
             theme="cream"
             delay={0}
-            icon={
-              <svg className="w-5 h-5 text-[#0A0A0C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            }
+            icon={<CalendarDays className="w-5 h-5" />}
           />
 
-          {/* Card 2: Pending Action (Electric Yellow Highlight Card) */}
+          {/* Card 2: Pending Action */}
           <StatCard
             label="Pending Action"
             value={loading ? '…' : stats.pending}
             theme="yellow"
             delay={0.05}
-            icon={
-              <svg className="w-5 h-5 text-[#0A0A0C] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            icon={<CalendarClock className="w-5 h-5 animate-pulse" />}
           />
 
-          {/* Card 3: Approved (Dark Obsidian Emerald) */}
+          {/* Card 3: Approved */}
           <StatCard
             label="Approved"
             value={loading ? '…' : stats.approved}
             theme="dark-emerald"
             delay={0.1}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            icon={<CalendarCheck className="w-5 h-5" />}
           />
 
-          {/* Card 4: Approved Future (Dark Obsidian Yellow) */}
+          {/* Card 4: Approved Future */}
           <StatCard
             label="Approved Future"
             value={loading ? '…' : stats.approvedFutureReservations}
             theme="dark-amber"
             delay={0.15}
             subtitle="Scheduled ahead"
-            icon={<Calendar className="w-5 h-5 text-[#FFD000]" />}
+            icon={<TrendingUp className="w-5 h-5 text-[#FFD000]" />}
           />
 
-          {/* Card 5: Cancelled / Rejected (Dark Obsidian Rose) */}
+          {/* Card 5: Cancelled / Rejected */}
           <StatCard
             label="Cancelled / Rejected"
             value={loading ? '…' : (stats.rejected + stats.cancelled)}
             theme="dark-rose"
             delay={0.2}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            icon={<CircleX className="w-5 h-5" />}
           />
         </div>
 
@@ -540,14 +545,7 @@ export default function ReservationDashboard() {
             <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
               {/* Search input */}
               <div className="relative flex-1 sm:flex-initial">
-                <svg
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
                   placeholder="Search NIC, Node, ID..."

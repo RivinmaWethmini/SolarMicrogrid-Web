@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, XCircle, Zap } from 'lucide-react';
+import { QrCode, Zap, CircleCheck, CircleX, Ban, LoaderCircle } from 'lucide-react';
 
 // ─── Status Config ───────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -193,10 +193,7 @@ export default function ReservationRow({
               exit={{ opacity: 0 }}
               className="flex items-center gap-2 text-slate-400 text-xs tracking-wide"
             >
-              <svg className="w-4 h-4 animate-spin text-[#FFD000]" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-              </svg>
+              <LoaderCircle className="w-4 h-4 animate-spin text-[#FFD000]" />
               Updating…
             </motion.div>
           ) : isPending ? (
@@ -213,12 +210,10 @@ export default function ReservationRow({
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onApprove(rowId)}
                 disabled={isLoading}
-                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1 transition-all"
+                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
                 title="Approve energy slot reservation and dispatch QR"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
+                <CircleCheck className="w-3.5 h-3.5" />
                 Approve
               </motion.button>
 
@@ -228,12 +223,10 @@ export default function ReservationRow({
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onReject(rowId)}
                 disabled={isLoading}
-                className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-semibold flex items-center gap-1 transition-all"
+                className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-semibold flex items-center gap-1.5 transition-all"
                 title="Reject reservation request"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
+                <CircleX className="w-3.5 h-3.5" />
                 Reject
               </motion.button>
             </motion.div>
@@ -262,23 +255,26 @@ export default function ReservationRow({
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => onCancel(rowId)}
-                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-white/10 text-xs font-medium flex items-center gap-1 transition-all"
+                className="px-2.5 py-1.5 rounded-xl bg-white/5 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-white/10 text-xs font-medium flex items-center gap-1.5 transition-all"
                 title="Cancel reservation"
               >
-                <XCircle className="w-3.5 h-3.5" />
+                <Ban className="w-3.5 h-3.5" />
                 Cancel
               </motion.button>
             </motion.div>
           ) : isCancelled ? (
-            <span className="text-xs text-slate-500 italic tracking-wide">
+            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 italic tracking-wide">
+              <Ban className="w-3 h-3" />
               Cancelled
             </span>
           ) : isRejected ? (
-            <span className="text-xs text-red-400/80 italic tracking-wide">
+            <span className="inline-flex items-center gap-1.5 text-xs text-red-400/80 italic tracking-wide">
+              <CircleX className="w-3 h-3" />
               Rejected
             </span>
           ) : (
-            <span className="text-xs text-slate-500 italic tracking-wide">
+            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 italic tracking-wide">
+              <CircleCheck className="w-3 h-3" />
               Resolved
             </span>
           )}

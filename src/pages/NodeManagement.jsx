@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
+import { RefreshCw, Plus, LoaderCircle, X, Network, Zap, BatteryCharging, ArrowLeft } from 'lucide-react';
 import NodeRow from '../components/NodeRow';
 import {
   getNodes,
@@ -326,7 +328,16 @@ export default function NodeManagement() {
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
         <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <span className="mb-3 inline-flex rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700">
+            <Link
+              to="/reservations"
+              className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Back to Dashboard
+            </Link>
+
+            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-emerald-700">
+              <Network className="h-3.5 w-3.5" />
               Grid Operator
             </span>
 
@@ -345,42 +356,37 @@ export default function NodeManagement() {
             disabled={isLoadingList}
             className="secondary-btn"
           >
-            <svg
-              className={`h-4 w-4 ${
-                isLoadingList ? 'animate-spin' : ''
-              }`}
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v6h6M20 20v-6h-6M5.64 18.36A9 9 0 0018.36 5.64M18.36 5.64H14M5.64 18.36H10"
-              />
-            </svg>
+            <RefreshCw className={`h-4 w-4 ${isLoadingList ? 'animate-spin' : ''}`} />
             Refresh
           </button>
         </section>
 
         <section className="grid gap-4 sm:grid-cols-3">
           <div className="summary-card">
-            <span className="summary-label">Total Nodes</span>
+            <div className="flex items-center gap-2 mb-1">
+              <Network className="h-4 w-4 text-slate-500" />
+              <span className="summary-label">Total Nodes</span>
+            </div>
             <strong className="summary-number text-slate-900">
               {nodes.length}
             </strong>
           </div>
 
           <div className="summary-card">
-            <span className="summary-label">Active Nodes</span>
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="h-4 w-4 text-emerald-600" />
+              <span className="summary-label">Active Nodes</span>
+            </div>
             <strong className="summary-number text-emerald-600">
               {activeCount}
             </strong>
           </div>
 
           <div className="summary-card">
-            <span className="summary-label">Inactive Nodes</span>
+            <div className="flex items-center gap-2 mb-1">
+              <BatteryCharging className="h-4 w-4 text-slate-500" />
+              <span className="summary-label">Inactive Nodes</span>
+            </div>
             <strong className="summary-number text-slate-500">
               {inactiveCount}
             </strong>
@@ -402,8 +408,9 @@ export default function NodeManagement() {
                 type="button"
                 onClick={() => setErrorMsg('')}
                 aria-label="Close error message"
+                className="flex items-center justify-center"
               >
-                ×
+                <X className="w-3.5 h-3.5" />
               </button>
             </motion.div>
           )}
@@ -422,8 +429,9 @@ export default function NodeManagement() {
                 type="button"
                 onClick={() => setSuccessMsg('')}
                 aria-label="Close success message"
+                className="flex items-center justify-center"
               >
-                ×
+                <X className="w-3.5 h-3.5" />
               </button>
             </motion.div>
           )}
@@ -522,24 +530,12 @@ export default function NodeManagement() {
             >
               {isSubmitting ? (
                 <>
-                  <span className="button-spinner" />
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
                   Registering
                 </>
               ) : (
                 <>
-                  <svg
-                    className="h-4 w-4"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
+                  <Plus className="h-4 w-4" />
                   Register Node
                 </>
               )}
@@ -583,7 +579,7 @@ export default function NodeManagement() {
                         className="px-5 py-16 text-center"
                       >
                         <div className="flex items-center justify-center gap-3 text-sm text-slate-500">
-                          <span className="loading-spinner" />
+                          <LoaderCircle className="h-5 w-5 animate-spin text-slate-400" />
                           Loading nodes
                         </div>
                       </td>
@@ -652,7 +648,7 @@ export default function NodeManagement() {
                   className="modal-close"
                   aria-label="Close edit modal"
                 >
-                  ×
+                  <X className="w-4 h-4" />
                 </button>
               </div>
 
@@ -746,7 +742,7 @@ export default function NodeManagement() {
                   >
                     {isUpdating ? (
                       <>
-                        <span className="button-spinner" />
+                        <LoaderCircle className="h-4 w-4 animate-spin" />
                         Saving
                       </>
                     ) : (
