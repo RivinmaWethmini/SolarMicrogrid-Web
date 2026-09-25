@@ -7,8 +7,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        display: ['Inter', 'system-ui', 'sans-serif'],
+        sans: ['Poppins', 'Outfit', 'Inter', 'system-ui', 'sans-serif'],
+        display: ['Poppins', 'Outfit', 'Inter', 'system-ui', 'sans-serif'],
       },
       colors: {
         solar: {

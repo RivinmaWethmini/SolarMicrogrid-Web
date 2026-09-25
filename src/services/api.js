@@ -151,97 +151,12 @@ export const authApi = {
     const response = await api.post('/auth/login', { identifier, password, deviceInfo });
     return response.data;
   },
-
-  register: async ({ email, username, password, fullName, nic, role, otp, deviceInfo = 'SolarMicrogrid Web Dashboard' }) => {
-    const response = await api.post('/auth/register', {
-      email,
-      username: username?.trim() || undefined,
-      password,
-      fullName: fullName?.trim() || undefined,
-      nic: nic?.trim() || undefined,
-      role: role || 'Consumer',
-      otp: otp?.trim() || undefined,
-      deviceInfo,
-    });
-    return response.data;
-  },
-
-  sendOtp: async (email, role = 'Consumer') => {
-    const response = await api.post('/auth/otp/send', { email, role });
-    return response.data;
-  },
-
-  sendLoginOtp: async (identifier) => {
-    const response = await api.post('/auth/otp/send-login', { identifier });
-    return response.data;
-  },
-
-  verifyOtp: async (identifierOrEmail, otp, deviceInfo = 'SolarMicrogrid Web Dashboard') => {
-    const payload = {
-      identifier: identifierOrEmail,
-      email: identifierOrEmail.includes('@') ? identifierOrEmail : undefined,
-      otp,
-      deviceInfo,
-    };
-    const response = await api.post('/auth/otp/verify', payload);
-    return response.data;
-  },
-
-  refreshToken: async (refreshToken) => {
-    const response = await api.post('/auth/token/refresh', { refreshToken });
-    return response.data;
-  },
-
-  logout: async (refreshToken) => {
-    try {
-      const response = await api.post('/auth/logout', { refreshToken });
-      return response.data;
-    } finally {
-      clearTokens();
-    }
-  },
-
-  getMe: async () => {
-    const response = await api.get('/auth/me');
-    return response.data;
-  },
-
-  getSessions: async () => {
-    const response = await api.get('/auth/sessions');
-    return response.data;
-  },
-
-  revokeSession: async (sessionId) => {
-    const response = await api.delete(`/auth/sessions/${sessionId}`);
-    return response.data;
-  },
-
-  // Admin Prosumer Approval & Grid Operations
-  getProsumers: async (status = '') => {
-    const query = status ? `?status=${encodeURIComponent(status)}` : '';
-    const response = await api.get(`/admin/prosumers${query}`);
-    return response.data;
-  },
-
-  getPendingProsumers: async () => {
-    const response = await api.get('/admin/prosumers/pending');
-    return response.data;
-  },
-
-  approveProsumer: async (id) => {
-    const response = await api.put(`/admin/prosumers/${id}/approve`);
-    return response.data;
-  },
-
-  rejectProsumer: async (id, reason = '') => {
-    const response = await api.put(`/admin/prosumers/${id}/reject`, { reason });
-    return response.data;
-  },
-
-  getAdminStats: async () => {
-    const response = await api.get('/admin/stats');
-    return response.data;
-  },
-};
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Return friendly error messages when server responds with bad request
+    return Promise.reject(error);
+  }
+);
 
 export default api;
