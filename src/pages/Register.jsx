@@ -255,7 +255,8 @@ export default function Register() {
         );
       }
 
-      navigate('/reservations', { replace: true });
+      const defaultDest = authResponse.user?.role?.toLowerCase() === 'admin' ? '/admin/approvals' : '/reservations';
+      navigate(defaultDest, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Verification failed. Please check the code.';
       toast.error(msg);
