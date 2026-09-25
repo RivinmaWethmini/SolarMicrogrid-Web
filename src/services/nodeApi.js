@@ -1,8 +1,10 @@
 import api from './api';
 
-export const getNodes = () => api.get('/nodes');
+export const getNodes = () =>
+  api.get('/nodes');
 
-export const getNodeById = (id) => api.get(`/nodes/${id}`);
+export const getNodeById = (id) =>
+  api.get(`/nodes/${id}`);
 
 export const createNode = (payload) =>
   api.post('/nodes', payload);

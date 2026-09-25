@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,7 +6,18 @@
 
 @layer base {
   :root {
-    font-family: 'Outfit', system-ui, sans-serif;
+    --bg-black: #08090c;
+    --bg-dark-surface: #101116;
+    --bg-dark-card: #15171e;
+    --border-dark: rgba(255, 255, 255, 0.08);
+    --yellow-primary: #ffd000;
+    --yellow-hover: #ffc000;
+    --yellow-glow: rgba(255, 208, 0, 0.25);
+    --card-cream: #f8f7f0;
+    --sans: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      Roboto, sans-serif;
+
+    font-family: var(--sans);
     color: #1e293b;
     background: #f8fafc;
     font-synthesis: none;
@@ -27,9 +38,11 @@
     min-width: 320px;
     min-height: 100vh;
     margin: 0;
-    background: #f8fafc;
+    font-family: var(--sans);
     color: #1e293b;
+    background: #f8fafc;
     -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
   }
 
   button,
@@ -52,6 +65,24 @@
   h5,
   h6 {
     color: #0f172a;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #e2e8f0;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
   }
 }
 
@@ -183,5 +214,81 @@
 
   .button-spinner {
     @apply border-white/40 border-t-white;
+  }
+
+  .dashboard-container {
+    @apply min-h-screen font-sans;
+    color: #f4f4f7;
+    background:
+      radial-gradient(
+        circle at 50% 0%,
+        rgba(255, 208, 0, 0.06) 0%,
+        rgba(8, 9, 12, 1) 60%
+      ),
+      #08090c;
+  }
+
+  .dashboard-container h1,
+  .dashboard-container h2,
+  .dashboard-container h3,
+  .dashboard-container h4,
+  .dashboard-container h5,
+  .dashboard-container h6 {
+    color: inherit;
+  }
+
+  .glass-card {
+    @apply rounded-3xl border transition-all duration-300;
+    background: rgba(18, 19, 25, 0.85);
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-card:hover {
+    border-color: rgba(255, 208, 0, 0.2);
+    box-shadow: 0 20px 48px -10px rgba(0, 0, 0, 0.7);
+  }
+
+  .yellow-pill-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200;
+    color: #0a0a0c;
+    background-color: #ffd000;
+    box-shadow: 0 4px 18px rgba(255, 208, 0, 0.25);
+  }
+
+  .yellow-pill-btn:hover:not(:disabled) {
+    background-color: #ffe033;
+    box-shadow: 0 6px 24px rgba(255, 208, 0, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .dark-pill-btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold tracking-wider transition-all duration-200;
+    color: #9ca3af;
+    background-color: #1a1c24;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .dark-pill-btn:hover:not(:disabled) {
+    color: #ffffff;
+    background-color: #242732;
+    border-color: rgba(255, 255, 255, 0.16);
+  }
+}
+
+@layer utilities {
+  .animate-pulse-subtle {
+    animation: pulseSubtle 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+}
+
+@keyframes pulseSubtle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.6;
   }
 }
