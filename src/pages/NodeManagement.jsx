@@ -328,13 +328,27 @@ export default function NodeManagement() {
       <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
         <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
-            <Link
-              to="/reservations"
-              className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Dashboard
-            </Link>
+            <div className="mb-4 flex flex-wrap items-center gap-2">
+              <Link
+                to="/reservations"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/80 hover:bg-slate-300 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Reservations
+              </Link>
+              <Link
+                to="/scan"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/80 hover:bg-slate-300 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                Verify Pass
+              </Link>
+              <Link
+                to="/admin/approvals"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-200/80 hover:bg-slate-300 text-xs font-semibold text-slate-700 transition-colors"
+              >
+                Approvals
+              </Link>
+            </div>
 
             <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
               <Network className="h-3.5 w-3.5" />

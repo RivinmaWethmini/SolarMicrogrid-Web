@@ -3,8 +3,10 @@ import {
   Ban,
   Check,
   CircleX,
+  Clock,
   LoaderCircle,
   QrCode,
+  XCircle,
   Zap,
 } from 'lucide-react';
 
@@ -68,6 +70,7 @@ export default function ReservationRow({
   onViewQr,
   loadingId,
   index,
+  userRole,
 }) {
   const rowId = reservation.id ?? reservation.reservationId ?? '';
   const prosumerNic = reservation.prosumerNic
@@ -87,9 +90,10 @@ export default function ReservationRow({
   const status = reservation.status ?? 'Pending';
   const statusKey = normalizeStatus(status);
 
-  const isLoading = loadingId === rowId;
   const isPending = statusKey === 'pending';
   const isApproved = statusKey === 'approved';
+  const isAdmin = userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'gridoperator';
+  const isLoading = loadingId === rowId;
 
   const rowVariants = {
     hidden: { opacity: 0, y: 8 },
@@ -162,32 +166,61 @@ export default function ReservationRow({
               Updating
             </motion.span>
           ) : isPending ? (
-            <motion.div
-              key="pending-actions"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="ledger-row-actions"
-            >
-              <button
-                type="button"
-                onClick={() => onApprove(rowId)}
-                className="row-action is-approve"
-                title="Approve this reservation"
+            isAdmin ? (
+              <motion.div
+                key="pending-actions"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="ledger-row-actions"
               >
-                <Check aria-hidden="true" />
-                Approve
-              </button>
-              <button
-                type="button"
-                onClick={() => onReject(rowId)}
-                className="row-action is-reject"
-                title="Reject this reservation"
+                <button
+                  type="button"
+                  onClick={() => onApprove(rowId)}
+                  disabled={isLoading}
+                  className="row-action is-approve"
+                  title="Approve energy slot reservation and dispatch QR"
+                >
+                  <Check aria-hidden="true" />
+                  Approve
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onReject(rowId)}
+                  disabled={isLoading}
+                  className="row-action is-reject"
+                  title="Reject reservation request"
+                >
+                  <CircleX aria-hidden="true" />
+                  Reject
+                </button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="non-admin-pending"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="ledger-row-actions"
               >
-                <CircleX aria-hidden="true" />
-                Reject
-              </button>
-            </motion.div>
+                <span className="ledger-status is-pending" title="Awaiting operator review">
+                  <Clock aria-hidden="true" />
+                  Awaiting review
+                </span>
+                {onCancel && (
+                  <button
+                    type="button"
+                    onClick={() => onCancel(rowId)}
+                    disabled={isLoading}
+                    className="row-action is-reject"
+                    title="Withdraw / Cancel pending booking"
+                  >
+                    <XCircle aria-hidden="true" />
+                    Cancel
+                  </button>
+                )}
+              </motion.div>
+            )
           ) : isApproved ? (
             <motion.div
               key="approved-actions"

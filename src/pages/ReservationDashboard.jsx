@@ -1,26 +1,33 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
   Activity,
   AlertTriangle,
   ArrowUpRight,
+  Calendar,
   Check,
   CircleCheck,
   CircleX,
   Copy,
+  Leaf,
+  LogOut,
   Network,
+  QrCode,
   RefreshCw,
   Rows3,
   ScanLine,
   Search,
   ShieldCheck,
+  Sun,
   SunMedium,
+  User,
   X,
   Zap,
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ReservationRow from '../components/ReservationRow';
 
 const TABLE_HEADERS = [
@@ -324,6 +331,9 @@ function QrModal({ reservation, onClose }) {
 }
 
 export default function ReservationDashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [reservations, setReservations] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -340,6 +350,57 @@ export default function ReservationDashboard() {
   const [loadingId, setLoadingId] = useState(null);
   const [selectedQrReservation, setSelectedQrReservation] = useState(null);
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
+
+  const userRole = (user?.role || '').toLowerCase();
+  const isAdmin = userRole === 'admin';
+  const isProsumer = userRole === 'prosumer';
+  const isConsumer = userRole === 'consumer';
+
+  const portalConfig = isAdmin
+    ? {
+        title: 'Grid Operator Portal',
+        badge: 'Live Operator',
+        badgeClass: 'bg-[#FFD000]/15 text-[#FFD000] border-[#FFD000]/30',
+        icon: <ShieldCheck className="w-3 h-3" />,
+        subtitle: 'Smart Solar Microgrid Energy Slot Reservation & Dispatch Control Center',
+        tableTitle: 'Energy Slot Reservation Queue',
+        statPendingLabel: 'Pending Action',
+        statApprovedLabel: 'Approved',
+        statApprovedFutureLabel: 'Approved Future',
+      }
+    : isProsumer
+    ? {
+        title: 'Solar Prosumer Dispatch Portal',
+        badge: 'Solar Producer',
+        badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        icon: <Sun className="w-3 h-3 text-amber-400" />,
+        subtitle: 'Solar Generation Slot Booking, Dispatch Passes & Grid Injection Schedules',
+        tableTitle: 'Energy Injection & Dispatch Reservations',
+        statPendingLabel: 'Pending Verification',
+        statApprovedLabel: 'Active Passes',
+        statApprovedFutureLabel: 'Scheduled Slots',
+      }
+    : {
+        title: 'Clean Energy Consumer Portal',
+        badge: 'Clean Energy Buyer',
+        badgeClass: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+        icon: <Leaf className="w-3 h-3 text-emerald-400" />,
+        subtitle: 'Smart Solar Microgrid Clean Energy Booking & Grid Consumption Overview',
+        tableTitle: 'Clean Energy Slot Reservations',
+        statPendingLabel: 'Pending Allocation',
+        statApprovedLabel: 'Confirmed Clean Power',
+        statApprovedFutureLabel: 'Upcoming Deliveries',
+      };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch {
+      navigate('/login');
+    }
+  };
 
   const fetchReservationsAndStats = useCallback(async () => {
     try {
@@ -489,15 +550,74 @@ export default function ReservationDashboard() {
           <Link to="/reservations" className="is-current">Reservations</Link>
           <Link to="/nodes">Solar nodes</Link>
           <Link to="/scan">Verify pass</Link>
+          {isAdmin && (
+            <Link to="/admin/approvals">Prosumer approvals</Link>
+          )}
         </nav>
 
-        <div className={'operations-connection' + (error ? ' is-offline' : '')}>
-          <i />
-          <span>{error ? 'Controller offline' : 'Live controller'}</span>
+        <div className="operations-topbar-actions">
+          <div className={'operations-connection' + (error ? ' is-offline' : '')}>
+            <i />
+            <span>{error ? 'API offline' : 'Live (5298)'}</span>
+          </div>
+
+          {user ? (
+            <div className="operations-user-pill">
+              <div className="user-avatar-tag">
+                {user.email ? user.email[0].toUpperCase() : <User className="w-3 h-3" />}
+              </div>
+              <div className="user-meta-tag">
+                <span className="user-email-text">{user.email || user.username}</span>
+                <span className={'user-role-badge role-' + (user.role || 'consumer').toLowerCase()}>
+                  {user.role}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="user-logout-btn"
+                title="Sign out and revoke active session"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <Link to="/login" className="user-login-btn">
+              Login
+            </Link>
+          )}
         </div>
       </header>
 
       <main className="operations-workspace">
+        {isProsumer && user?.approvalStatus === 'PendingApproval' && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-2xl bg-[#FFD000]/10 border border-[#FFD000]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-black/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FFD000]/20 flex items-center justify-center text-[#FFD000] flex-shrink-0">
+                <Clock className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#FFD000]">
+                    Prosumer Verification In Progress
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FFD000] animate-ping" />
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Your Prosumer account is awaiting operator authorization. You have full live access to the energy reservation queue and grid telemetry below.
+                </p>
+              </div>
+            </div>
+            <span className="self-start sm:self-auto px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/30 whitespace-nowrap">
+              Awaiting Review
+            </span>
+          </motion.div>
+        )}
+
         <section className="operations-hero">
           <div className="operations-heading">
             <div className="section-coordinate">
@@ -536,7 +656,7 @@ export default function ReservationDashboard() {
           />
         </section>
 
-        <section className="telemetry-rail" aria-label="Reservation telemetry">
+<section className="telemetry-rail" aria-label="Reservation telemetry">
           <MetricCell
             index={0}
             label="Awaiting decision"
@@ -672,6 +792,7 @@ export default function ReservationDashboard() {
                             onViewQr={setSelectedQrReservation}
                             loadingId={loadingId}
                             index={index}
+                            userRole={user?.role}
                           />
                         ))
                       )}

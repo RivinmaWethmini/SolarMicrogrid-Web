@@ -165,9 +165,21 @@ export default function QrScannerPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              to="/nodes"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all"
+            >
+              Solar Nodes
+            </Link>
+            <Link
+              to="/admin/approvals"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-white/10 bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-all"
+            >
+              Approvals
+            </Link>
             <span className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[11px] font-bold">
               <ShieldCheck className="w-3.5 h-3.5" />
-              Station Operator
+              Verify Pass
             </span>
           </div>
         </div>

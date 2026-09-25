@@ -338,6 +338,130 @@
   box-shadow: 0 0 0 4px rgba(255, 123, 102, 0.1);
 }
 
+.operations-topbar-actions {
+  display: inline-flex;
+  justify-self: end;
+  align-items: center;
+  gap: 16px;
+}
+
+.operations-user-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 5px 12px 5px 6px;
+  border: 1px solid var(--ops-line-strong);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.035);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  transition: border-color 180ms ease, background-color 180ms ease;
+}
+
+.operations-user-pill:hover {
+  border-color: rgba(255, 208, 0, 0.35);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.user-avatar-tag {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(255, 208, 0, 0.15);
+  color: #FFD000;
+  font-size: 11px;
+  font-weight: 700;
+  border: 1px solid rgba(255, 208, 0, 0.3);
+}
+
+.user-meta-tag {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+}
+
+.user-email-text {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ops-text);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.user-role-badge {
+  display: inline-block;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  width: max-content;
+  margin-top: 2px;
+}
+
+.user-role-badge.role-admin,
+.user-role-badge.role-gridoperator {
+  background: rgba(255, 208, 0, 0.15);
+  color: #FFD000;
+  border: 1px solid rgba(255, 208, 0, 0.3);
+}
+
+.user-role-badge.role-prosumer {
+  background: rgba(52, 211, 153, 0.15);
+  color: #6ee7b7;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.user-role-badge.role-consumer {
+  background: rgba(56, 189, 248, 0.15);
+  color: #7dd3fc;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+.user-logout-btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid rgba(248, 113, 113, 0.25);
+  background: rgba(239, 68, 68, 0.1);
+  color: #f87171;
+  cursor: pointer;
+  transition: all 160ms ease;
+  margin-left: 2px;
+}
+
+.user-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: #fca5a5;
+  border-color: rgba(248, 113, 113, 0.5);
+  transform: scale(1.06);
+}
+
+.user-login-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 208, 0, 0.4);
+  background: rgba(255, 208, 0, 0.12);
+  color: #FFD000;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 160ms ease;
+}
+
+.user-login-btn:hover {
+  background: #FFD000;
+  color: #0b0d0b;
+}
+
 .operations-workspace {
   width: min(1500px, 100%);
   margin: 0 auto;
