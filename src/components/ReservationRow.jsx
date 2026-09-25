@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { QrCode, XCircle, Zap } from 'lucide-react';
+import { QrCode, XCircle, Zap, Clock } from 'lucide-react';
 
 // ─── Status Config ───────────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -77,6 +77,7 @@ export default function ReservationRow({
   onViewQr,
   loadingId,
   index,
+  userRole,
 }) {
   const rowId = reservation.id ?? reservation.reservationId ?? '';
   const prosumerNic = reservation.prosumerNic ?? reservation.prosumerId ?? reservation.consumerId ?? '—';
@@ -94,6 +95,7 @@ export default function ReservationRow({
   const isApproved = status === 'Approved';
   const isCancelled = status === 'Cancelled';
   const isRejected = status === 'Rejected';
+  const isAdmin = userRole?.toLowerCase() === 'admin';
 
   const rowVariants = {
     hidden: { opacity: 0, y: 14, scale: 0.99 },
@@ -200,43 +202,68 @@ export default function ReservationRow({
               Updating…
             </motion.div>
           ) : isPending ? (
-            <motion.div
-              key="pending-actions"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="flex items-center gap-2"
-            >
-              {/* Approve Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onApprove(rowId)}
-                disabled={isLoading}
-                className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1 transition-all"
-                title="Approve energy slot reservation and dispatch QR"
+            isAdmin ? (
+              <motion.div
+                key="pending-actions"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-2"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                </svg>
-                Approve
-              </motion.button>
+                {/* Approve Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onApprove(rowId)}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 text-xs font-semibold flex items-center gap-1 transition-all shadow-sm"
+                  title="Approve energy slot reservation and dispatch QR"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                  Approve
+                </motion.button>
 
-              {/* Reject Button */}
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => onReject(rowId)}
-                disabled={isLoading}
-                className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-semibold flex items-center gap-1 transition-all"
-                title="Reject reservation request"
+                {/* Reject Button */}
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onReject(rowId)}
+                  disabled={isLoading}
+                  className="px-3 py-1.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/40 text-xs font-semibold flex items-center gap-1 transition-all shadow-sm"
+                  title="Reject reservation request"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                  Reject
+                </motion.button>
+              </motion.div>
+            ) : (
+              <motion.div
+                key="non-admin-pending"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex items-center gap-2"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-                Reject
-              </motion.button>
-            </motion.div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#FFD000]/10 text-[#FFD000] border border-[#FFD000]/25 text-xs font-semibold">
+                  <Clock className="w-3.5 h-3.5 animate-pulse text-[#FFD000]" />
+                  Awaiting Operator Approval
+                </span>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => onCancel(rowId)}
+                  className="px-2.5 py-1 rounded-xl bg-white/5 hover:bg-red-500/20 hover:text-red-300 text-slate-400 border border-white/10 text-xs font-medium flex items-center gap-1 transition-all"
+                  title="Withdraw / Cancel pending booking"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  Cancel
+                </motion.button>
+              </motion.div>
+            )
           ) : isApproved ? (
             <motion.div
               key="approved-actions"

@@ -24,11 +24,11 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected Operator & Prosumer Energy Slot Queue */}
+          {/* Protected Energy Slot Queue (Admin, Prosumer, Consumer) */}
           <Route
             path="/reservations"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Prosumer']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Prosumer', 'Consumer']}>
                 <ReservationManagement />
               </ProtectedRoute>
             }

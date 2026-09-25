@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast, { Toaster } from 'react-hot-toast';
-import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck, LogOut, User } from 'lucide-react';
+import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck, LogOut, User, Leaf, Sun } from 'lucide-react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import ReservationRow from '../components/ReservationRow';
@@ -294,6 +294,47 @@ export default function ReservationDashboard() {
   const [loadingId, setLoadingId] = useState(null);
   const [selectedQrReservation, setSelectedQrReservation] = useState(null);
 
+  const userRole = (user?.role || '').toLowerCase();
+  const isAdmin = userRole === 'admin';
+  const isProsumer = userRole === 'prosumer';
+  const isConsumer = userRole === 'consumer';
+
+  const portalConfig = isAdmin
+    ? {
+        title: 'Grid Operator Portal',
+        badge: 'Live Operator',
+        badgeClass: 'bg-[#FFD000]/15 text-[#FFD000] border-[#FFD000]/30',
+        icon: <ShieldCheck className="w-3 h-3" />,
+        subtitle: 'Smart Solar Microgrid Energy Slot Reservation & Dispatch Control Center',
+        tableTitle: 'Energy Slot Reservation Queue',
+        statPendingLabel: 'Pending Action',
+        statApprovedLabel: 'Approved',
+        statApprovedFutureLabel: 'Approved Future',
+      }
+    : isProsumer
+    ? {
+        title: 'Solar Prosumer Dispatch Portal',
+        badge: 'Solar Producer',
+        badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        icon: <Sun className="w-3 h-3 text-amber-400" />,
+        subtitle: 'Solar Generation Slot Booking, Dispatch Passes & Grid Injection Schedules',
+        tableTitle: 'Energy Injection & Dispatch Reservations',
+        statPendingLabel: 'Pending Verification',
+        statApprovedLabel: 'Active Passes',
+        statApprovedFutureLabel: 'Scheduled Slots',
+      }
+    : {
+        title: 'Clean Energy Consumer Portal',
+        badge: 'Clean Energy Buyer',
+        badgeClass: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+        icon: <Leaf className="w-3 h-3 text-emerald-400" />,
+        subtitle: 'Smart Solar Microgrid Clean Energy Booking & Grid Consumption Overview',
+        tableTitle: 'Clean Energy Slot Reservations',
+        statPendingLabel: 'Pending Allocation',
+        statApprovedLabel: 'Confirmed Clean Power',
+        statApprovedFutureLabel: 'Upcoming Deliveries',
+      };
+
   const handleLogout = async () => {
     try {
       await logout();
@@ -422,15 +463,15 @@ export default function ReservationDashboard() {
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-3xl font-black text-white tracking-tight leading-none">
-                  Grid Operator Portal
+                  {portalConfig.title}
                 </h1>
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[10px] font-bold uppercase tracking-wider">
-                  <ShieldCheck className="w-3 h-3" />
-                  Live Operator
+                <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[10px] font-bold uppercase tracking-wider ${portalConfig.badgeClass}`}>
+                  {portalConfig.icon}
+                  {portalConfig.badge}
                 </span>
               </div>
               <p className="text-xs text-slate-400 tracking-wide mt-1.5">
-                Smart Solar Microgrid Energy Slot Reservation &amp; Dispatch Control Center
+                {portalConfig.subtitle}
               </p>
             </div>
           </div>
@@ -517,9 +558,9 @@ export default function ReservationDashboard() {
             }
           />
 
-          {/* Card 2: Pending Action (Electric Yellow Highlight Card) */}
+          {/* Card 2: Pending Action / Verification / Allocation */}
           <StatCard
-            label="Pending Action"
+            label={portalConfig.statPendingLabel}
             value={loading ? '…' : stats.pending}
             theme="yellow"
             delay={0.05}
@@ -530,9 +571,9 @@ export default function ReservationDashboard() {
             }
           />
 
-          {/* Card 3: Approved (Dark Obsidian Emerald) */}
+          {/* Card 3: Approved / Active Passes / Confirmed */}
           <StatCard
-            label="Approved"
+            label={portalConfig.statApprovedLabel}
             value={loading ? '…' : stats.approved}
             theme="dark-emerald"
             delay={0.1}
@@ -543,9 +584,9 @@ export default function ReservationDashboard() {
             }
           />
 
-          {/* Card 4: Approved Future (Dark Obsidian Yellow) */}
+          {/* Card 4: Approved Future / Scheduled */}
           <StatCard
-            label="Approved Future"
+            label={portalConfig.statApprovedFutureLabel}
             value={loading ? '…' : stats.approvedFutureReservations}
             theme="dark-amber"
             delay={0.15}
@@ -578,7 +619,7 @@ export default function ReservationDashboard() {
           <div className="px-6 sm:px-8 py-6 border-b border-white/[0.06] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight leading-none">
-                Energy Slot Reservation Queue
+                {portalConfig.tableTitle}
               </h2>
               <p className="text-xs text-slate-400 tracking-wide mt-1.5">
                 Showing <span className="text-[#FFD000] font-bold">{filtered.length}</span> of <span className="text-white font-bold">{reservations.length}</span> live records
@@ -669,6 +710,7 @@ export default function ReservationDashboard() {
                             onViewQr={(res) => setSelectedQrReservation(res)}
                             loadingId={loadingId}
                             index={i}
+                            userRole={user?.role}
                           />
                         ))
                       )}
