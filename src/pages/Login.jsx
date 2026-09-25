@@ -378,7 +378,7 @@ export default function Login() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. sanjitha_solar or operator@solarmicrogrid.com"
+                      placeholder="e.g. rivinma_solar or operator@solarmicrogrid.com"
                       value={otpIdentifier}
                       onChange={(e) => setOtpIdentifier(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"

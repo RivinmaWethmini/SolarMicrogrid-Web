@@ -389,7 +389,7 @@ export default function Register() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. Sanjitha Ranasinghe"
+                      placeholder="e.g. Rivinma Dissanayake"
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
@@ -406,7 +406,7 @@ export default function Register() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. sanjitha_solar"
+                      placeholder="e.g. rivinma_solar"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       className="w-full pl-10 pr-3.5 py-2.5 rounded-2xl bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
