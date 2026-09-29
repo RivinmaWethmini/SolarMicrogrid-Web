@@ -86,7 +86,7 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
       <div className="operations-topbar-actions">
         <div className={'operations-connection' + (isOffline ? ' is-offline' : '')}>
           <i />
-          <span>{isOffline ? 'API offline' : 'Live (5298)'}</span>
+          <span>{isOffline ? 'Offline' : 'Online'}</span>
         </div>
 
         {user ? (

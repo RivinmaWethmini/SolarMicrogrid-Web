@@ -342,7 +342,7 @@ export default function NodeManagement() {
           </div>
 
           <aside className="node-hero-console" aria-label="Node registry control">
-            <span className="node-console-index">Network control / 02</span>
+            <span className="node-console-index">Solar Hub Control</span>
             <div className="node-console-status">
               <i aria-hidden="true" />
               Registry synchronized

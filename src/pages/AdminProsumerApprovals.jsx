@@ -70,7 +70,7 @@ export default function AdminProsumerApprovals() {
       }
     } catch (err) {
       console.error('Failed to load prosumers:', err);
-      setError('Unable to load prosumer applications from Central API (Port 5298).');
+      setError('Unable to load prosumer applications.');
       toast.error('Failed to retrieve prosumer records.');
     } finally {
       setLoading(false);

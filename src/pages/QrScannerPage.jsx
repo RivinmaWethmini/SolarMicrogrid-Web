@@ -174,21 +174,21 @@ export default function QrScannerPage() {
             </div>
             <dl className="qr-station-readings">
               <div>
-                <dt>Controller</dt>
-                <dd>SolarAPI / QR verify</dd>
+                <dt>System</dt>
+                <dd>Ready</dd>
               </div>
               <div>
                 <dt>Scanner</dt>
-                <dd>{scanning ? 'Camera live' : scannerReady ? 'Camera paused' : 'Camera standby'}</dd>
+                <dd>{scanning ? 'Camera active' : scannerReady ? 'Camera paused' : 'Standby'}</dd>
               </div>
               <div>
-                <dt>Protocol</dt>
-                <dd>Encrypted dispatch pass</dd>
+                <dt>Pass Type</dt>
+                <dd>Energy Transfer</dd>
               </div>
             </dl>
             <span className={'qr-station-link' + (cameraError ? ' is-error' : '')}>
               <i aria-hidden="true" />
-              {cameraError ? 'Camera link interrupted' : 'Verification controller online'}
+              {cameraError ? 'Camera interrupted' : 'Scanner ready'}
             </span>
           </aside>
         </section>
@@ -417,11 +417,6 @@ export default function QrScannerPage() {
               </article>
             )}
           </div>
-
-          <footer className="qr-console-foot">
-            <span><i aria-hidden="true" />Controller channel encrypted</span>
-            <span>POST /api/qr/verify</span>
-          </footer>
         </section>
       </main>
     </div>

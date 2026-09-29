@@ -182,9 +182,9 @@ function GridFlow({ pending, approved, error, loading }) {
       <div className="grid-flow-foot">
         <span className={'connection-line' + (error ? ' is-offline' : '')}>
           <i />
-          {error ? 'API link offline' : 'Controller is receiving live data'}
+          {error ? 'Link offline' : 'Active system connection'}
         </span>
-        <span>Port 5298</span>
+        <span>Active</span>
       </div>
     </div>
   );
@@ -441,7 +441,7 @@ export default function ReservationDashboard() {
       setLastSyncedAt(new Date());
     } catch (fetchError) {
       console.error('Fetch error:', fetchError);
-      setError('Unable to reach the Solar Microgrid API on port 5298.');
+      setError('Unable to reach the Solar Microgrid API.');
       toast.error('The reservation ledger could not be refreshed.');
     } finally {
       setLoading(false);
@@ -558,7 +558,7 @@ export default function ReservationDashboard() {
         <div className="operations-topbar-actions">
           <div className={'operations-connection' + (error ? ' is-offline' : '')}>
             <i />
-            <span>{error ? 'API offline' : 'Live (5298)'}</span>
+            <span>{error ? 'Offline' : 'Online'}</span>
           </div>
 
           {user ? (
