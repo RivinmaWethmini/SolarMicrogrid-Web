@@ -5,13 +5,15 @@ import NodeManagement from './pages/NodeManagement';
 import QrScannerPage from './pages/QrScannerPage';
 import { Toaster } from 'react-hot-toast';
 import ProsumerManagement from './pages/ProsumerManagement';
+import BackofficeDashboard from './pages/BackofficeDashboard';
 
 function App() {
   return (
     <Router>
       <Toaster position="top-right" />
       <Routes>
-        <Route path="/" element={<Navigate to="/reservations" replace />} />
+        <Route path="/backoffice" element={<BackofficeDashboard />} />
+        <Route path="/" element={<Navigate to="/backoffice" replace />} />
         <Route path="/reservations" element={<ReservationDashboard />} />
         <Route path="/prosumers" element={<ProsumerManagement />} />
         {/* Member 3 - Avishka: Node Management */}

@@ -17,55 +17,56 @@ export default function ProsumerRow({
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.03 }}
-      className="hover:bg-slate-50"
+      className="prosumer-table-row"
     >
-      <td className="px-5 py-4 text-sm font-semibold text-slate-900">
+      <td className="prosumer-td nic-cell">
         {prosumer.nic}
       </td>
 
-      <td className="px-5 py-4 text-sm text-slate-700">
+      <td className="prosumer-td name-cell">
         {prosumer.name}
       </td>
 
-      <td className="px-5 py-4 text-sm text-slate-700">
+      <td className="prosumer-td">
         {prosumer.solarCapacityKw} kW
       </td>
 
-      <td className="px-5 py-4 text-sm text-slate-700">
+      <td className="prosumer-td">
         {prosumer.batteryCapacityKwh} kWh
       </td>
 
-      <td className="px-5 py-4 text-sm text-slate-700">
+      <td className="prosumer-td">
         {prosumer.availableEnergyKw} kW
       </td>
 
-      <td className="px-5 py-4 text-sm text-slate-700">
+      <td className="prosumer-td price-cell">
         Rs. {prosumer.pricePerKwh}
       </td>
 
-      <td className="px-5 py-4 text-sm text-slate-700">
+      <td className="prosumer-td">
         {prosumer.location || '—'}
       </td>
 
-      <td className="px-5 py-4">
+      <td className="prosumer-td">
         <span
-          className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${
+          className={
             isActive
-              ? 'bg-emerald-100 text-emerald-700'
-              : 'bg-slate-100 text-slate-500'
-          }`}
+              ? 'prosumer-status active'
+              : 'prosumer-status inactive'
+          }
         >
+          <span className="status-dot" />
           {isActive ? 'Active' : 'Inactive'}
         </span>
       </td>
 
-      <td className="px-5 py-4">
-        <div className="flex items-center gap-2">
+      <td className="prosumer-td">
+        <div className="prosumer-actions">
           <button
             type="button"
             onClick={() => onEdit(prosumer)}
             disabled={isLoading}
-            className="secondary-btn"
+            className="prosumer-action edit"
           >
             <Edit3 className="h-4 w-4" />
             Edit
@@ -76,7 +77,7 @@ export default function ProsumerRow({
               type="button"
               onClick={() => onDeactivate(prosumer.nic)}
               disabled={isLoading}
-              className="secondary-btn"
+              className="prosumer-action deactivate"
             >
               {isLoading ? (
                 'Updating'
@@ -92,7 +93,7 @@ export default function ProsumerRow({
               type="button"
               onClick={() => onReactivate(prosumer.nic)}
               disabled={isLoading}
-              className="primary-btn"
+              className="prosumer-action reactivate"
             >
               {isLoading ? (
                 'Updating'
