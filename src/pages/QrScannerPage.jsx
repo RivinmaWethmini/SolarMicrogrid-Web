@@ -14,6 +14,7 @@ import {
   User,
   CalendarDays,
   Layers,
+  Upload,
 } from 'lucide-react';
 import api from '../services/api';
 import NavigationHeader from '../components/NavigationHeader';
@@ -33,8 +34,10 @@ export default function QrScannerPage() {
   const [cameraError, setCameraError] = useState('');
   const [manualPayload, setManualPayload] = useState('');
   const [activeTab, setActiveTab] = useState('camera'); // 'camera' | 'manual'
+  const [fileScanning, setFileScanning] = useState(false);
 
   const html5QrCodeRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   // Submit payload to SolarAPI endpoint
   const handleVerifyPayload = async (payloadString) => {
@@ -62,9 +65,13 @@ export default function QrScannerPage() {
     }
   };
 
-  // Initialize and start camera scanner
-  const startCamera = async () => {
+  // Handle QR image file upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
     try {
+      setFileScanning(true);
       setCameraError('');
       setResult(null);
 
@@ -72,68 +79,179 @@ export default function QrScannerPage() {
       if (!html5QrCodeRef.current) {
         html5QrCodeRef.current = new Html5Qrcode(qrRegionId);
       }
-
       const qrCode = html5QrCodeRef.current;
       if (qrCode.isScanning) {
         await qrCode.stop();
+        setScanning(false);
+      }
+      const decodedText = await qrCode.scanFile(file, false);
+      await handleVerifyPayload(decodedText);
+    } catch (fileErr) {
+      console.error('File scan error:', fileErr);
+      setCameraError(
+        'No valid prosumer QR pass detected in this image. Please ensure the code is clear or use the Manual payload tab.'
+      );
+    } finally {
+      setFileScanning(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Initialize and start camera scanner with device detection and fallback
+  const startCamera = async () => {
+    try {
+      setCameraError('');
+      setResult(null);
+
+      // Clean up previous instance cleanly
+      if (html5QrCodeRef.current) {
+        try {
+          if (html5QrCodeRef.current.isScanning) {
+            await html5QrCodeRef.current.stop();
+          }
+          await html5QrCodeRef.current.clear();
+        } catch (cleanupErr) {
+          console.warn('Scanner cleanup warning:', cleanupErr);
+        }
+        html5QrCodeRef.current = null;
       }
 
-      await qrCode.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 260, height: 260 },
-          aspectRatio: 1.0,
-        },
-        async (decodedText) => {
-          // Success callback on valid QR decode
-          try {
-            await qrCode.pause(true);
-          } catch (e) {
-            console.warn('Scanner pause error', e);
-          }
-          setScanning(false);
-          await handleVerifyPayload(decodedText);
-        },
-        () => {
-          // Frame parse error (ignore frame-by-frame scanner noise)
+      const qrRegionId = 'qr-reader-viewport';
+      const container = document.getElementById(qrRegionId);
+      if (!container) {
+        return;
+      }
+
+      const qrCode = new Html5Qrcode(qrRegionId);
+      html5QrCodeRef.current = qrCode;
+
+      // Detect available cameras on this computer/device
+      let selectedCamera = null;
+      try {
+        const cameras = await Html5Qrcode.getCameras();
+        if (cameras && cameras.length > 0) {
+          // If a rear / back camera exists (e.g. tablet/phone), prefer it;
+          // otherwise pick the primary webcam on laptops/desktops.
+          const rear = cameras.find((cam) =>
+            /back|rear|environment|world/i.test(cam.label)
+          );
+          selectedCamera = rear ? rear.id : cameras[0].id;
         }
-      );
+      } catch (enumErr) {
+        console.warn('Camera enumeration error, trying constraints:', enumErr);
+      }
+
+      const scanConfig = {
+        fps: 10,
+        qrbox: { width: 260, height: 260 },
+        aspectRatio: 1.0,
+      };
+
+      const onScanSuccess = async (decodedText) => {
+        try {
+          if (html5QrCodeRef.current?.isScanning) {
+            await html5QrCodeRef.current.pause(true);
+          }
+        } catch (e) {
+          console.warn('Scanner pause error:', e);
+        }
+        setScanning(false);
+        await handleVerifyPayload(decodedText);
+      };
+
+      const onScanFailure = () => {
+        // Frame parse error (ignore frame-by-frame scanner noise)
+      };
+
+      if (selectedCamera) {
+        try {
+          await qrCode.start(selectedCamera, scanConfig, onScanSuccess, onScanFailure);
+        } catch (camIdErr) {
+          console.warn('Failed starting camera by ID, trying fallback facingMode:', camIdErr);
+          await qrCode.start({ facingMode: 'user' }, scanConfig, onScanSuccess, onScanFailure);
+        }
+      } else {
+        // Fallback sequence: 'user' first (standard for laptop webcams), then 'environment'
+        try {
+          await qrCode.start({ facingMode: 'user' }, scanConfig, onScanSuccess, onScanFailure);
+        } catch {
+          await qrCode.start({ facingMode: 'environment' }, scanConfig, onScanSuccess, onScanFailure);
+        }
+      }
 
       setScanning(true);
       setScannerReady(true);
     } catch (err) {
       console.error('Camera access error:', err);
-      setCameraError(
-        'Unable to access camera. Please allow camera permissions or use the Manual Verification tab.'
-      );
+      const name = err?.name || '';
+      const msg = err?.message || String(err);
+
+      if (
+        name === 'NotAllowedError' ||
+        name === 'PermissionDeniedError' ||
+        msg.toLowerCase().includes('permission') ||
+        msg.toLowerCase().includes('denied')
+      ) {
+        setCameraError(
+          'Camera access was blocked by your browser. Click the lock/camera icon in your address bar (left of localhost:5173), choose "Allow", and click "Start camera".'
+        );
+      } else if (
+        name === 'NotFoundError' ||
+        name === 'DevicesNotFoundError' ||
+        msg.toLowerCase().includes('not found')
+      ) {
+        setCameraError(
+          'No camera device was detected on your computer. Please connect a webcam or use the "Upload pass image" button below.'
+        );
+      } else if (
+        name === 'NotReadableError' ||
+        name === 'TrackStartError' ||
+        msg.toLowerCase().includes('source')
+      ) {
+        setCameraError(
+          'Your camera is currently in use by another application (like Windows Camera, Teams, or Zoom). Please close it and click "Start camera" again.'
+        );
+      } else {
+        setCameraError(
+          `Unable to access camera (${name || 'Error'}: ${msg}). You can also upload a QR pass image or paste the raw JSON in Manual payload.`
+        );
+      }
       setScanning(false);
+      setScannerReady(false);
     }
   };
 
   // Stop camera stream safely
   const stopCamera = async () => {
     try {
-      if (html5QrCodeRef.current && html5QrCodeRef.current.isScanning) {
-        await html5QrCodeRef.current.stop();
+      if (html5QrCodeRef.current) {
+        if (html5QrCodeRef.current.isScanning) {
+          await html5QrCodeRef.current.stop();
+        }
+        await html5QrCodeRef.current.clear();
       }
     } catch (err) {
       console.warn('Camera stop error:', err);
     } finally {
+      html5QrCodeRef.current = null;
       setScanning(false);
+      setScannerReady(false);
     }
   };
 
+  // Stop camera on unmount or tab switch
   useEffect(() => {
-    if (activeTab === 'camera') {
-      startCamera();
-    } else {
-      stopCamera();
-    }
-
     return () => {
       stopCamera();
     };
+  }, []);
+
+  useEffect(() => {
+    if (activeTab !== 'camera') {
+      stopCamera();
+    }
   }, [activeTab]);
 
   const resetAndScanNext = async () => {
@@ -261,10 +379,17 @@ export default function QrScannerPage() {
                     <span className="qr-corner qr-corner-three" aria-hidden="true" />
                     <span className="qr-corner qr-corner-four" aria-hidden="true" />
                     <div id="qr-reader-viewport" className="qr-reader-viewport" />
-                    {loading && (
+                    {!scanning && !loading && !fileScanning && (
+                      <div className="qr-standby-overlay">
+                        <Camera className="qr-standby-icon" aria-hidden="true" />
+                        <p>Scanner standby</p>
+                        <span>Click &quot;Start camera&quot; or upload an image to scan</span>
+                      </div>
+                    )}
+                    {(loading || fileScanning) && (
                       <div className="qr-loading-overlay" aria-live="polite">
                         <LoaderCircle className="is-spinning" aria-hidden="true" />
-                        <p>Verifying with SolarAPI...</p>
+                        <p>{fileScanning ? 'Analyzing pass image...' : 'Verifying with SolarAPI...'}</p>
                       </div>
                     )}
                   </div>
@@ -283,14 +408,32 @@ export default function QrScannerPage() {
                       <li>Wait for controller authorization.</li>
                     </ol>
                   </div>
-                  <button
-                    type="button"
-                    onClick={scanning ? stopCamera : startCamera}
-                    className="qr-control-button"
-                  >
-                    <Camera aria-hidden="true" />
-                    {scanning ? 'Pause camera' : 'Start camera'}
-                  </button>
+                  <div className="qr-camera-actions">
+                    <button
+                      type="button"
+                      onClick={scanning ? stopCamera : startCamera}
+                      className="qr-control-button"
+                    >
+                      <Camera aria-hidden="true" />
+                      {scanning ? 'Pause camera' : 'Start camera'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={fileScanning || loading}
+                      className="qr-control-button qr-control-button-secondary"
+                    >
+                      <Upload aria-hidden="true" />
+                      {fileScanning ? 'Analyzing pass...' : 'Upload pass image'}
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={handleFileUpload}
+                    />
+                  </div>
                 </div>
 
                 {cameraError && (

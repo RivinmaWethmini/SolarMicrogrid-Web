@@ -2888,6 +2888,64 @@
   background: #f1fc7c;
 }
 
+.qr-camera-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.qr-control-button-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ops-text);
+  border: 1px solid var(--ops-line);
+}
+
+.qr-control-button-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--ops-line-strong);
+}
+
+.qr-control-button-secondary svg {
+  color: var(--ops-solar);
+}
+
+.qr-standby-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 13, 11, 0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+  z-index: 15;
+}
+
+.qr-standby-icon {
+  width: 36px;
+  height: 36px;
+  color: var(--ops-solar);
+  opacity: 0.7;
+  margin-bottom: 4px;
+}
+
+.qr-standby-overlay p {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  letter-spacing: -0.01em;
+}
+
+.qr-standby-overlay span {
+  font-size: 12px;
+  color: var(--ops-muted);
+  max-width: 220px;
+  line-height: 1.4;
+}
+
 .qr-alert {
   display: flex;
   align-items: flex-start;
