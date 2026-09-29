@@ -9,7 +9,8 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
   const navigate = useNavigate();
 
   const userRole = (user?.role || '').toLowerCase();
-  const isAdmin = userRole === 'admin';
+  const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
+  const isOperator = userRole === 'gridoperator';
 
   const handleLogout = async () => {
     try {
@@ -27,7 +28,7 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
 
   return (
     <header className="operations-topbar">
-      <Link to="/reservations" className="operations-brand" aria-label="Solar grid reservation ledger">
+      <Link to={isBackoffice ? "/backoffice" : "/reservations"} className="operations-brand" aria-label="Solar grid reservation ledger">
         <span className="operations-brand-mark">
           <SunMedium />
         </span>
@@ -38,6 +39,28 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
       </Link>
 
       <nav className="operations-nav" aria-label="Portal navigation sections">
+        {isBackoffice && (
+          <>
+            <Link
+              to="/backoffice"
+              className={isActive('/backoffice') ? 'is-current' : ''}
+            >
+              Backoffice
+            </Link>
+            <Link
+              to="/prosumers"
+              className={isActive('/prosumers') ? 'is-current' : ''}
+            >
+              Prosumers
+            </Link>
+            <Link
+              to="/admin/prosumers"
+              className={isActive('/admin/prosumers') ? 'is-current' : ''}
+            >
+              Approvals
+            </Link>
+          </>
+        )}
         <Link
           to="/reservations"
           className={isActive('/reservations') ? 'is-current' : ''}
@@ -50,7 +73,7 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
         >
           Solar nodes
         </Link>
-        {(isAdmin || userRole === 'gridoperator') && (
+        {(isBackoffice || isOperator) && (
           <Link
             to="/scan"
             className={isActive('/scan') ? 'is-current' : ''}

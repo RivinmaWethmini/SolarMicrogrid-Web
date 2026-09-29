@@ -84,12 +84,13 @@ export default function Login() {
       toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
 
       const userRole = authResponse.user?.role?.toLowerCase();
+      const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
       let destination = location.state?.from?.pathname;
-      if (destination && destination.startsWith('/admin') && userRole !== 'admin') {
+      if (destination && destination.startsWith('/admin') && !isBackoffice) {
         destination = '/reservations';
       }
-      if (!destination || destination.startsWith('/admin')) {
-        destination = '/reservations';
+      if (!destination) {
+        destination = isBackoffice ? '/backoffice' : '/reservations';
       }
       navigate(destination, { replace: true });
     } catch (err) {
@@ -179,12 +180,13 @@ export default function Login() {
       toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
 
       const userRole = authResponse.user?.role?.toLowerCase();
+      const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
       let destination = location.state?.from?.pathname;
-      if (destination && destination.startsWith('/admin') && userRole !== 'admin') {
+      if (destination && destination.startsWith('/admin') && !isBackoffice) {
         destination = '/reservations';
       }
-      if (!destination || destination.startsWith('/admin')) {
-        destination = '/reservations';
+      if (!destination) {
+        destination = isBackoffice ? '/backoffice' : '/reservations';
       }
       navigate(destination, { replace: true });
     } catch (err) {

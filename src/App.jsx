@@ -8,6 +8,9 @@ import Onboarding from './pages/Onboarding';
 import ReservationDashboard from './pages/ReservationDashboard';
 import NodeManagement from './pages/NodeManagement';
 import QrScannerPage from './pages/QrScannerPage';
+import BackofficeDashboard from './pages/BackofficeDashboard';
+import ProsumerManagement from './pages/ProsumerManagement';
+import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
 function App() {
   return (
@@ -27,11 +30,37 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected Energy Slot Queue (Admin, Prosumer, Consumer) */}
+          {/* Member 2 - Manuga: Backoffice Administration & Prosumer Management */}
+          <Route
+            path="/backoffice"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <BackofficeDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/prosumers"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <ProsumerManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/prosumers"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <AdminProsumerApprovals />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Protected Energy Slot Queue (Admin, Backoffice, Prosumer, Consumer, GridOperator) */}
           <Route
             path="/reservations"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Prosumer', 'Consumer', 'GridOperator']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'Prosumer', 'Consumer', 'GridOperator']}>
                 <ReservationDashboard />
               </ProtectedRoute>
             }
@@ -41,7 +70,7 @@ function App() {
           <Route
             path="/nodes"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'GridOperator']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator']}>
                 <NodeManagement />
               </ProtectedRoute>
             }
@@ -51,15 +80,15 @@ function App() {
           <Route
             path="/scan"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'GridOperator']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator']}>
                 <QrScannerPage />
               </ProtectedRoute>
             }
           />
 
           {/* Admin Operations Console Fallback */}
-          <Route path="/admin" element={<Navigate to="/reservations" replace />} />
-          <Route path="/admin/*" element={<Navigate to="/reservations" replace />} />
+          <Route path="/admin" element={<Navigate to="/backoffice" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/backoffice" replace />} />
 
           {/* Wildcard Fallback */}
           <Route path="*" element={<Navigate to="/reservations" replace />} />
