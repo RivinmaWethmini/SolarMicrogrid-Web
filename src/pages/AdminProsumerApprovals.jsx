@@ -35,7 +35,7 @@ export default function AdminProsumerApprovals() {
   const [rejectingUser, setRejectingUser] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  // Fetch prosumers and operational metrics
+  // Fetch prosumers and operational metrics for manual refresh and actions
   const fetchProsumerData = useCallback(async () => {
     try {
       setLoading(true);
@@ -78,8 +78,46 @@ export default function AdminProsumerApprovals() {
   }, []);
 
   useEffect(() => {
-    fetchProsumerData();
-  }, [fetchProsumerData]);
+    let ignore = false;
+    authApi
+      .getProsumers()
+      .then((list) => {
+        if (!ignore) {
+          const prosumerList = list || [];
+          setProsumers(prosumerList);
+          const pending = prosumerList.filter((p) => p.approvalStatus === 'PendingApproval').length;
+          const approved = prosumerList.filter((p) => p.approvalStatus === 'Approved').length;
+          const rejected = prosumerList.filter((p) => p.approvalStatus === 'Rejected').length;
+          setStats({
+            totalProsumers: prosumerList.length,
+            pendingProsumers: pending,
+            approvedProsumers: approved,
+            rejectedProsumers: rejected,
+          });
+          setLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!ignore) {
+          console.error('Failed to load prosumers:', err);
+          setError('Unable to load prosumer applications from Central API (Port 5298).');
+          setLoading(false);
+        }
+      });
+
+    authApi
+      .getAdminStats()
+      .then((statsData) => {
+        if (!ignore && statsData) {
+          setStats(statsData);
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
 
   // Handle Approve
   const handleApprove = async (prosumerId, email) => {
@@ -134,14 +172,8 @@ export default function AdminProsumerApprovals() {
   });
 
   return (
-    <div className="dashboard-container text-white min-h-screen">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          className:
-            'font-sans font-semibold text-xs rounded-2xl bg-[#16171E] text-white border border-white/10 shadow-xl',
-        }}
-      />
+    <div className="operations-shell">
+      <NavigationHeader subtitle="Operator console" />
 
       <main className="max-w-7xl mx-auto px-6 sm:px-8 py-10">
         {/* Header Bar */}
@@ -166,55 +198,14 @@ export default function AdminProsumerApprovals() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center p-1 rounded-full bg-[#15171E] border border-white/10">
-              <Link
-                to="/reservations"
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
-              >
-                <Zap className="w-3.5 h-3.5 text-[#FFD000]" />
-                <span>Reservations</span>
-              </Link>
-              <Link
-                to="/nodes"
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
-              >
-                <span>Nodes</span>
-              </Link>
-              <Link
-                to="/scan"
-                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all"
-              >
-                <span>Verify Pass</span>
-              </Link>
-              <div className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 rounded-full text-xs font-bold bg-[#FFD000] text-black shadow-md">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Approvals</span>
-                {stats.pendingProsumers > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-full bg-black/20 text-[10px] font-black">
-                    {stats.pendingProsumers}
-                  </span>
-                )}
-              </div>
-            </div>
-
-            {/* Refresh */}
+          <div className="flex items-center gap-3">
             <button
               onClick={fetchProsumerData}
               disabled={loading}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all disabled:opacity-50 shadow-md"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all disabled:opacity-50 shadow-md hover:border-[#FFD000]/50"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-
-            {/* Logout */}
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-full border border-red-500/20 bg-red-500/10 hover:bg-red-500/20 text-red-300 hover:text-red-200 text-xs font-bold transition-all shadow-md"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              <span>Logout</span>
+              <span>Refresh prosumers</span>
             </button>
           </div>
         </div>
@@ -438,11 +429,9 @@ export default function AdminProsumerApprovals() {
                   ) : filtered.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-16 text-center">
-                        <img
-                          src={emptyStateSvg}
-                          alt="No prosumers"
-                          className="w-40 mx-auto mb-4 opacity-80"
-                        />
+                        <div className="w-16 h-16 rounded-3xl bg-white/[0.04] border border-white/10 flex items-center justify-center mx-auto mb-4 text-[#FFD000]">
+                          <ShieldCheck className="w-8 h-8 opacity-70" />
+                        </div>
                         <h3 className="text-lg font-bold text-white mb-1">
                           No {filter !== 'All' ? `${filter} ` : ''}Prosumer Applications
                         </h3>
@@ -459,7 +448,6 @@ export default function AdminProsumerApprovals() {
                         const status = p.approvalStatus || 'Approved';
                         const isPending = status === 'PendingApproval';
                         const isApproved = status === 'Approved';
-                        const isRejected = status === 'Rejected';
                         const isLoadingThis = actionLoadingId === p.id;
 
                         return (

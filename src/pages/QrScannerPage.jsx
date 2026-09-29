@@ -36,6 +36,32 @@ export default function QrScannerPage() {
 
   const html5QrCodeRef = useRef(null);
 
+  // Submit payload to SolarAPI endpoint
+  const handleVerifyPayload = async (payloadString) => {
+    setLoading(true);
+    setResult(null);
+    try {
+      const response = await api.post('/qr/verify', {
+        scannedPayload: payloadString.trim(),
+        operatorId: 'WEB-OPERATOR-STATION-01',
+      });
+
+      setResult({
+        success: true,
+        data: response.data,
+      });
+    } catch (err) {
+      const errData = err.response?.data;
+      setResult({
+        success: false,
+        message: errData?.message || 'Verification rejected by Solar Microgrid server.',
+        data: errData || null,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Initialize and start camera scanner
   const startCamera = async () => {
     try {
@@ -69,7 +95,7 @@ export default function QrScannerPage() {
           setScanning(false);
           await handleVerifyPayload(decodedText);
         },
-        (errorMessage) => {
+        () => {
           // Frame parse error (ignore frame-by-frame scanner noise)
         }
       );
@@ -109,32 +135,6 @@ export default function QrScannerPage() {
       stopCamera();
     };
   }, [activeTab]);
-
-  // Submit payload to SolarAPI endpoint
-  const handleVerifyPayload = async (payloadString) => {
-    setLoading(true);
-    setResult(null);
-    try {
-      const response = await api.post('/qr/verify', {
-        scannedPayload: payloadString.trim(),
-        operatorId: 'WEB-OPERATOR-STATION-01',
-      });
-
-      setResult({
-        success: true,
-        data: response.data,
-      });
-    } catch (err) {
-      const errData = err.response?.data;
-      setResult({
-        success: false,
-        message: errData?.message || 'Verification rejected by Solar Microgrid server.',
-        data: errData || null,
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const resetAndScanNext = async () => {
     setResult(null);

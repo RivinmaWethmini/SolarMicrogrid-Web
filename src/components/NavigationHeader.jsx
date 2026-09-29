@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SunMedium, LogOut, User, ShieldCheck } from 'lucide-react';
+import { SunMedium, LogOut, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
