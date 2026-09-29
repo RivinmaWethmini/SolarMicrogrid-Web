@@ -58,6 +58,14 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
             Verify pass
           </Link>
         )}
+        {isAdmin && (
+          <Link
+            to="/admin/approvals"
+            className={isActive('/admin/approvals') ? 'is-current' : ''}
+          >
+            Prosumer approvals
+          </Link>
+        )}
       </nav>
 
       <div className="operations-topbar-actions">

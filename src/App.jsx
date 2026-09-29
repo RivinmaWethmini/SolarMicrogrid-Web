@@ -8,6 +8,7 @@ import Onboarding from './pages/Onboarding';
 import ReservationDashboard from './pages/ReservationDashboard';
 import NodeManagement from './pages/NodeManagement';
 import QrScannerPage from './pages/QrScannerPage';
+import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
 function App() {
   return (
@@ -57,9 +58,19 @@ function App() {
             }
           />
 
+          {/* Protected Admin Prosumer Verification & Approvals (Admin Only) */}
+          <Route
+            path="/admin/approvals"
+            element={
+              <ProtectedRoute allowedRoles={['Admin']}>
+                <AdminProsumerApprovals />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Admin Operations Console Fallback */}
-          <Route path="/admin" element={<Navigate to="/reservations" replace />} />
-          <Route path="/admin/*" element={<Navigate to="/reservations" replace />} />
+          <Route path="/admin" element={<Navigate to="/admin/approvals" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/admin/approvals" replace />} />
 
           {/* Wildcard Fallback */}
           <Route path="*" element={<Navigate to="/reservations" replace />} />

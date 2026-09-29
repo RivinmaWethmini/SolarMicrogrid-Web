@@ -147,15 +147,8 @@ export default function AdminProsumerApprovals() {
         {/* Header Bar */}
         <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-5 mb-8">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative flex-shrink-0">
-              <video
-                src={solarGridVideo}
-                autoPlay
-                loop
-                muted
-                playsInline
-                className="w-full h-full object-cover"
-              />
+            <div className="w-14 h-14 rounded-2xl bg-[#FFD000]/10 border-2 border-[#FFD000]/40 shadow-xl shadow-black/80 flex items-center justify-center flex-shrink-0">
+              <ShieldCheck className="w-7 h-7 text-[#FFD000]" />
             </div>
             <div>
               <div className="flex items-center gap-2.5">
