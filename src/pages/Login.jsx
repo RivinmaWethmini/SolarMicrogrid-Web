@@ -81,7 +81,7 @@ export default function Login() {
       loginWithAuthResponse(authResponse);
 
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || authResponse.user?.email;
-      toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
+      toast.success(`Welcome back, ${userGreeting}!`);
 
       const userRole = authResponse.user?.role?.toLowerCase();
       const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
@@ -94,7 +94,14 @@ export default function Login() {
       }
       navigate(destination, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid email/username or password.';
+      let msg = err.response?.data?.message;
+      if (!msg) {
+        if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+          msg = 'Unable to connect to Solar API server (port 5298). Please verify the backend is running.';
+        } else {
+          msg = 'Invalid email/username or password.';
+        }
+      }
       toast.error(msg);
     } finally {
       setLoggingIn(false);
@@ -124,7 +131,7 @@ export default function Login() {
         otpInputsRef.current[0]?.focus();
       }, 150);
     } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to send verification code. Please check your credentials.';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' || !err.response ? 'Cannot connect to backend server (port 5298).' : 'Failed to send verification code. Please check your credentials.');
       toast.error(msg);
     } finally {
       setSendingOtp(false);
@@ -177,7 +184,7 @@ export default function Login() {
       loginWithAuthResponse(authResponse);
 
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || 'Member';
-      toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
+      toast.success(`Welcome back, ${userGreeting}!`);
 
       const userRole = authResponse.user?.role?.toLowerCase();
       const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
@@ -190,7 +197,7 @@ export default function Login() {
       }
       navigate(destination, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Verification failed. Please check the code.';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' || !err.response ? 'Cannot connect to backend server (port 5298).' : 'Verification failed. Please check the code.');
       toast.error(msg);
       setOtp(['', '', '', '', '', '']);
       otpInputsRef.current[0]?.focus();
@@ -204,10 +211,10 @@ export default function Login() {
       {/* Top Minimal Brand Bar */}
       <header className="operations-topbar !grid-template-columns-none flex items-center justify-between px-6 sm:px-12 py-4">
         <Link to="/" className="inline-flex items-center gap-3 text-[#f0f0e8] no-underline">
-          <span className="w-8 h-8 rounded-lg bg-[#111410] border border-[#2a2f27] flex items-center justify-center text-[#e9f85b]">
-            <SunMedium className="w-4 h-4" />
+          <span className="w-8 h-8 rounded-lg bg-[#111410] border border-[#2a2f27] flex items-center justify-center p-1">
+            <img src="/solar-logo.png" alt="Solarrays Logo" className="w-5 h-5 object-contain" />
           </span>
-          <span className="font-semibold text-sm">Solis microgrid</span>
+          <span className="font-semibold text-sm">Solarrays microgrid</span>
         </Link>
 
         <div className="flex items-center gap-4 text-xs">
@@ -242,7 +249,7 @@ export default function Login() {
           {/* Top Indicator */}
           <div className="relative z-10 mb-3">
             <span className="text-sm sm:text-base font-normal text-[#e9f85b] tracking-wide font-sans">
-              Solis microgrid network
+              Solarrays microgrid network
             </span>
           </div>
 
@@ -259,7 +266,7 @@ export default function Login() {
 
           {/* Bottom Simple Caption */}
           <div className="relative z-10 text-xs text-[#666c63]">
-            Solis Microgrid Platform
+            Solarrays Microgrid Platform
           </div>
         </section>
 
@@ -314,7 +321,7 @@ export default function Login() {
                     <input
                       type="text"
                       required
-                      placeholder="e.g. operator@solis.lk or username"
+                      placeholder="Enter your email or username"
                       value={identifier}
                       onChange={(e) => setIdentifier(e.target.value)}
                       className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
@@ -383,7 +390,7 @@ export default function Login() {
                         <input
                           type="text"
                           required
-                          placeholder="e.g. operator@solis.lk or username"
+                          placeholder="Enter your email or username"
                           value={otpIdentifier}
                           onChange={(e) => setOtpIdentifier(e.target.value)}
                           className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"

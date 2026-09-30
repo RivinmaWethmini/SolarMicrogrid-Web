@@ -1,7 +1,10 @@
 import axios from 'axios';
 
 // Resolve backend API URL (Default to port 5298 for C# Web API)
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5298/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 
+  (typeof window !== 'undefined' && window.location.hostname && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+    ? `http://${window.location.hostname}:5298/api`
+    : 'http://localhost:5298/api');
 
 export const TOKEN_KEYS = {
   ACCESS: 'accessToken',

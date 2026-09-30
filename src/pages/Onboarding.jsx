@@ -84,10 +84,10 @@ export default function Onboarding() {
       {/* Top Minimal Header */}
       <header className="relative z-10 flex items-center justify-between px-6 sm:px-12 py-6">
         <Link to="/" className="inline-flex items-center gap-3 text-[#f0f0e8] no-underline">
-          <div className="w-9 h-9 rounded-lg bg-[#111410]/80 backdrop-blur-md border border-[#2a2f27] flex items-center justify-center text-[#e9f85b]">
-            <SunMedium className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-lg bg-[#111410]/80 backdrop-blur-md border border-[#2a2f27] flex items-center justify-center p-1">
+            <img src="/solar-logo.png" alt="Solarrays Logo" className="w-5 h-5 object-contain" />
           </div>
-          <span className="font-semibold text-sm tracking-wide">Solis microgrid</span>
+          <span className="font-semibold text-sm tracking-wide">Solarrays microgrid</span>
         </Link>
 
         <div className="flex items-center gap-4">
@@ -203,7 +203,7 @@ export default function Onboarding() {
 
       {/* Bottom Minimal Footer */}
       <footer className="relative z-10 px-6 sm:px-12 py-6 flex items-center justify-between text-xs text-[#666c63]">
-        <span>Solis Microgrid</span>
+        <span>Solarrays Microgrid</span>
         <div className="flex items-center gap-4">
           <Link to="/login" className="text-[#92988d] hover:text-[#f0f0e8] transition-colors no-underline">
             Console sign in

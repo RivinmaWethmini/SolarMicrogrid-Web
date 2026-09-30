@@ -68,7 +68,6 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
         const updated = await refreshProfile();
         if (updated?.approvalStatus === 'Approved') {
           toast.success('Congratulations! Your Prosumer account has been approved by the Grid Operator!', {
-            icon: '⚡',
             duration: 6000,
           });
         } else if (updated?.approvalStatus === 'Rejected') {

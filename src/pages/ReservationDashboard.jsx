@@ -539,9 +539,11 @@ export default function ReservationDashboard() {
     <div className="operations-shell">
       <header className="operations-topbar">
         <Link to="/reservations" className="operations-brand" aria-label="Solar grid reservation ledger">
-          <span className="operations-brand-mark"><SunMedium /></span>
+          <span className="operations-brand-mark flex items-center justify-center p-1 bg-amber-500/10 rounded-xl border border-amber-400/30">
+            <img src="/solar-logo.png" alt="Solarrays Logo" className="w-6 h-6 object-contain" />
+          </span>
           <span>
-            <strong>Solis microgrid</strong>
+            <strong>Solarrays microgrid</strong>
             <small>Grid operator / station 01</small>
           </span>
         </Link>
