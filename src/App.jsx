@@ -86,6 +86,16 @@ function App() {
             }
           />
 
+          {/* Protected Admin Prosumer Verification & Approvals (Admin Only) */}
+          <Route
+            path="/admin/approvals"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <AdminProsumerApprovals />
+              </ProtectedRoute>
+            }
+          />
+
           {/* Admin Operations Console Fallback */}
           <Route path="/admin" element={<Navigate to="/backoffice" replace />} />
           <Route path="/admin/*" element={<Navigate to="/backoffice" replace />} />

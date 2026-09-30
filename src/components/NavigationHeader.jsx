@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { SunMedium, LogOut, User, ShieldCheck } from 'lucide-react';
+import { SunMedium, LogOut, User } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -79,6 +79,14 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
             className={isActive('/scan') ? 'is-current' : ''}
           >
             Verify pass
+          </Link>
+        )}
+        {isAdmin && (
+          <Link
+            to="/admin/approvals"
+            className={isActive('/admin/approvals') ? 'is-current' : ''}
+          >
+            Prosumer approvals
           </Link>
         )}
       </nav>
