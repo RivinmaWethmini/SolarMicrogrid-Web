@@ -212,9 +212,9 @@ export default function Login() {
       <header className="operations-topbar !grid-template-columns-none flex items-center justify-between px-6 sm:px-12 py-4">
         <Link to="/" className="inline-flex items-center gap-3 text-[#f0f0e8] no-underline">
           <span className="w-8 h-8 rounded-lg bg-[#111410] border border-[#2a2f27] flex items-center justify-center p-1">
-            <img src="/solar-logo.png" alt="Solarrays Logo" className="w-5 h-5 object-contain" />
+            <img src="/solar-logo.png" alt="SolarRays Logo" className="w-5 h-5 object-contain" />
           </span>
-          <span className="font-semibold text-sm">Solarrays microgrid</span>
+          <span className="font-semibold text-sm">SolarRays microgrid</span>
         </Link>
 
         <div className="flex items-center gap-4 text-xs">
@@ -249,7 +249,7 @@ export default function Login() {
           {/* Top Indicator */}
           <div className="relative z-10 mb-3">
             <span className="text-sm sm:text-base font-normal text-[#e9f85b] tracking-wide font-sans">
-              Solarrays microgrid network
+              SolarRays microgrid network
             </span>
           </div>
 
@@ -266,7 +266,7 @@ export default function Login() {
 
           {/* Bottom Simple Caption */}
           <div className="relative z-10 text-xs text-[#666c63]">
-            Solarrays Microgrid Platform
+            SolarRays Microgrid Platform
           </div>
         </section>
 

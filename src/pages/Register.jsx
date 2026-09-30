@@ -190,7 +190,7 @@ export default function Register() {
           { duration: 6000, icon: '⏳' }
         );
       } else {
-        toast.success(`Welcome to Solarrays Microgrid, ${fullName || username}!`);
+        toast.success(`Welcome to SolarRays Microgrid, ${fullName || username}!`);
       }
 
       navigate('/reservations', { replace: true });
@@ -210,9 +210,9 @@ export default function Register() {
       <header className="operations-topbar !grid-template-columns-none flex items-center justify-between px-6 sm:px-12 py-4">
         <Link to="/" className="inline-flex items-center gap-3 text-[#f0f0e8] no-underline">
           <span className="w-8 h-8 rounded-lg bg-[#111410] border border-[#2a2f27] flex items-center justify-center p-1">
-            <img src="/solar-logo.png" alt="Solarrays Logo" className="w-5 h-5 object-contain" />
+            <img src="/solar-logo.png" alt="SolarRays Logo" className="w-5 h-5 object-contain" />
           </span>
-          <span className="font-semibold text-sm">Solarrays microgrid</span>
+          <span className="font-semibold text-sm">SolarRays microgrid</span>
         </Link>
 
         <div className="flex items-center gap-4 text-xs">
@@ -264,7 +264,7 @@ export default function Register() {
 
           {/* Bottom Simple Caption */}
           <div className="relative z-10 text-xs text-[#666c63]">
-            Solarrays Microgrid Platform
+            SolarRays Microgrid Platform
           </div>
         </section>
 
@@ -447,7 +447,7 @@ export default function Register() {
                     className="w-3.5 h-3.5 rounded bg-[#151914] border-[#2a2f27] text-[#e9f85b] cursor-pointer"
                   />
                   <label htmlFor="agreeTerms" className="text-xs text-[#92988d] cursor-pointer">
-                    I agree to the Solarrays Microgrid terms and conditions.
+                    I agree to the SolarRays Microgrid terms and conditions.
                   </label>
                 </div>
 

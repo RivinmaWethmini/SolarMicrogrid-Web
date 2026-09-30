@@ -31,10 +31,10 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
     <header className="operations-topbar">
       <Link to={isBackoffice ? "/backoffice" : "/reservations"} className="operations-brand" aria-label="Solar grid reservation ledger">
         <span className="operations-brand-mark flex items-center justify-center p-1 bg-amber-500/10 rounded-xl border border-amber-400/30">
-          <img src="/solar-logo.png" alt="Solarrays Logo" className="w-6 h-6 object-contain" />
+          <img src="/solar-logo.png" alt="SolarRays Logo" className="w-6 h-6 object-contain" />
         </span>
         <span>
-          <strong>Solarrays Microgrid</strong>
+          <strong>SolarRays Microgrid</strong>
           <small>{user?.role ? `${user.role} console` : subtitle}</small>
         </span>
       </Link>
