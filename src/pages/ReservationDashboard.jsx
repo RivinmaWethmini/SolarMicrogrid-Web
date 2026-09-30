@@ -1,26 +1,67 @@
-import { useState, useEffect, useCallback } from 'react';
-import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import toast, { Toaster } from 'react-hot-toast';
-import { RefreshCw, QrCode, X, Copy, Check, Calendar, AlertCircle, Zap, ShieldCheck } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { AnimatePresence, motion } from 'framer-motion';
+import toast from 'react-hot-toast';
+import {
+  Activity,
+  AlertTriangle,
+  ArrowUpRight,
+  Calendar,
+  Check,
+  CircleCheck,
+  CircleX,
+  Clock,
+  Copy,
+  Leaf,
+  LogOut,
+  Network,
+  QrCode,
+  RefreshCw,
+  Rows3,
+  ScanLine,
+  Search,
+  ShieldCheck,
+  Sun,
+  SunMedium,
+  User,
+  X,
+  Zap,
+} from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import ReservationRow from '../components/ReservationRow';
-import emptyStateSvg from '../assets/images/empty-state.svg';
-import solarGridVideo from '../assets/images/Solar Grid.mp4';
+
+const TABLE_HEADERS = [
+  'Reference',
+  'Prosumer',
+  'Microgrid node',
+  'Energy',
+  'Window opens',
+  'Window closes',
+  'State',
+  'Operator action',
+];
+
+const FILTERS = ['All', 'Pending', 'Approved', 'Cancelled', 'Rejected'];
+
+function shortReference(value, length = 8) {
+  if (value === null || value === undefined || value === '') return 'Unassigned';
+  return String(value).slice(-length).toUpperCase();
+}
 
 function SkeletonRow({ index }) {
   return (
     <motion.tr
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ delay: index * 0.04 }}
-      className="border-b border-white/5"
+      transition={{ delay: index * 0.035 }}
+      className="ledger-skeleton-row"
     >
-      {[...Array(8)].map((_, i) => (
-        <td key={i} className="px-6 py-4">
-          <div
-            className="h-4 rounded-md bg-gradient-to-r from-white/5 via-white/10 to-white/5 animate-pulse"
-            style={{ width: ['70px', '110px', '80px', '75px', '90px', '90px', '80px', '110px'][i] }}
+      {[...Array(8)].map((_, cellIndex) => (
+        <td key={cellIndex}>
+          <span
+            className="ledger-skeleton-line"
+            style={{ width: ['72px', '112px', '96px', '64px', '104px', '104px', '72px', '126px'][cellIndex] }}
           />
         </td>
       ))}
@@ -30,235 +71,259 @@ function SkeletonRow({ index }) {
 
 function EmptyState({ filter }) {
   const isFiltered = filter !== 'All';
+
   return (
     <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.35 }}
-      className="flex flex-col items-center justify-center py-20 px-8 text-center"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="ledger-empty"
     >
-      <div className="mb-6 max-w-xs w-48 opacity-85">
-        <img
-          src={emptyStateSvg}
-          alt="No reservations"
-          className="w-full h-auto drop-shadow-[0_15px_30px_rgba(255,208,0,0.15)]"
-        />
+      <div className="ledger-empty-mark" aria-hidden="true">
+        <Rows3 />
+        <span>00</span>
       </div>
-      <h3 className="text-xl font-bold text-slate-100 mb-2 tracking-tight">
-        {isFiltered ? `No ${filter} Reservations` : 'Grid Dispatch Queue Empty'}
-      </h3>
-      <p className="text-slate-400 max-w-md mx-auto text-xs leading-relaxed">
-        {isFiltered
-          ? `There are currently no energy slot reservations with '${filter}' status.`
-          : 'All microgrid nodes are operating nominally. No active reservation entries in queue.'}
-      </p>
+      <div>
+        <h3>{isFiltered ? 'Nothing in this lane' : 'The dispatch ledger is clear'}</h3>
+        <p>
+          {isFiltered
+            ? 'No reservations currently match the ' + filter.toLowerCase() + ' state.'
+            : 'There are no active energy reservations waiting in the grid queue.'}
+        </p>
+      </div>
     </motion.div>
   );
 }
 
 function ErrorState({ message, onRetry }) {
   return (
-    <div className="flex flex-col items-center justify-center py-16 px-6 text-center">
-      <div className="w-14 h-14 bg-red-500/10 text-red-400 rounded-2xl flex items-center justify-center mb-3 border border-red-500/20 shadow-inner">
-        <AlertCircle className="w-7 h-7" />
+    <div className="ledger-error">
+      <AlertTriangle aria-hidden="true" />
+      <div>
+        <h3>Controller link interrupted</h3>
+        <p>{message}</p>
       </div>
-      <p className="text-red-300 font-bold text-sm mb-1">{message}</p>
-      <p className="text-slate-400 text-xs mb-5">Ensure Central Microgrid API is active on port 5298 and database is connected.</p>
-      <button
-        onClick={onRetry}
-        className="px-6 py-2.5 bg-white/10 hover:bg-white/15 text-white text-xs font-bold rounded-full border border-white/15 transition-all shadow-md"
-      >
-        Retry Connection
+      <button type="button" onClick={onRetry}>
+        <RefreshCw aria-hidden="true" />
+        Retry link
       </button>
     </div>
   );
 }
 
-function StatCard({ label, value, theme, icon, delay, subtitle }) {
-  // Theme options: 'yellow', 'cream', 'dark-emerald', 'dark-amber', 'dark-rose'
-  let cardClass = '';
-  let valueClass = '';
-  let labelClass = '';
-  let subClass = '';
-  let iconClass = '';
-
-  if (theme === 'yellow') {
-    cardClass = 'bg-[#FFD000] text-[#0A0A0C] border-none shadow-xl shadow-[#FFD000]/15';
-    valueClass = 'text-[#0A0A0C]';
-    labelClass = 'text-[#0A0A0C]/80';
-    subClass = 'text-[#0A0A0C]/70';
-    iconClass = 'bg-black/10 text-[#0A0A0C]';
-  } else if (theme === 'cream') {
-    cardClass = 'bg-[#F8F7F0] text-[#0A0A0C] border-none shadow-xl shadow-black/30';
-    valueClass = 'text-[#0A0A0C]';
-    labelClass = 'text-[#0A0A0C]/80';
-    subClass = 'text-[#0A0A0C]/70';
-    iconClass = 'bg-black/10 text-[#0A0A0C]';
-  } else if (theme === 'dark-emerald') {
-    cardClass = 'bg-[#121318] text-white border border-emerald-500/30 shadow-lg';
-    valueClass = 'text-emerald-400';
-    labelClass = 'text-slate-400';
-    subClass = 'text-emerald-500/70';
-    iconClass = 'bg-emerald-500/10 text-emerald-400';
-  } else if (theme === 'dark-amber') {
-    cardClass = 'bg-[#121318] text-white border border-[#FFD000]/30 shadow-lg';
-    valueClass = 'text-[#FFD000]';
-    labelClass = 'text-slate-400';
-    subClass = 'text-[#FFD000]/70';
-    iconClass = 'bg-[#FFD000]/10 text-[#FFD000]';
-  } else {
-    // dark-rose
-    cardClass = 'bg-[#121318] text-white border border-rose-500/20 shadow-lg';
-    valueClass = 'text-rose-400';
-    labelClass = 'text-slate-400';
-    subClass = 'text-rose-400/70';
-    iconClass = 'bg-rose-500/10 text-rose-400';
-  }
+function MetricCell({ index, label, value, note, ratio, tone = 'neutral', loading, priority = false }) {
+  const safeRatio = Math.max(0, Math.min(100, Number.isFinite(ratio) ? ratio : 0));
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 15 }}
+    <motion.article
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ delay, duration: 0.35, ease: 'easeOut' }}
-      className={`relative p-5 rounded-3xl transition-all duration-300 hover:-translate-y-1 ${cardClass}`}
+      transition={{ delay: index * 0.04, duration: 0.28 }}
+      className={'telemetry-cell tone-' + tone + (priority ? ' is-priority' : '')}
     >
-      <div className="flex items-center justify-between">
-        <div>
-          <p className={`text-3xl font-black tracking-tight leading-none ${valueClass}`}>{value}</p>
-          <p className={`text-[11px] tracking-wider uppercase mt-2 font-bold ${labelClass}`}>{label}</p>
-          {subtitle && (
-            <p className={`text-[10px] font-medium mt-0.5 ${subClass}`}>{subtitle}</p>
-          )}
-        </div>
-        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${iconClass}`}>
-          {icon}
-        </div>
+      <div className="telemetry-label">
+        <span>{String(index + 1).padStart(2, '0')}</span>
+        <p>{label}</p>
       </div>
-    </motion.div>
+      <div className="telemetry-reading">
+        <strong>{loading ? '··' : value}</strong>
+        <span>{note}</span>
+      </div>
+      <div className="telemetry-meter" aria-hidden="true">
+        <i style={{ width: (loading ? 22 : safeRatio) + '%' }} />
+      </div>
+    </motion.article>
   );
 }
 
-function FilterPill({ label, active, count, onClick }) {
+function FilterTab({ label, active, count, onClick }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`relative px-4 py-2 rounded-full text-xs font-bold tracking-wide transition-all duration-200 ${
-        active
-          ? 'text-[#0A0A0C] bg-[#FFD000] shadow-md shadow-[#FFD000]/25'
-          : 'text-slate-400 hover:text-slate-200 bg-white/[0.04] border border-white/5'
-      }`}
+      className={'ledger-filter' + (active ? ' is-active' : '')}
+      aria-pressed={active}
     >
-      {label}
-      <span className={`ml-1.5 px-1.5 py-0.5 rounded-full text-[10px] font-black ${active ? 'bg-black/15 text-[#0A0A0C]' : 'bg-white/10 text-slate-400'}`}>
-        {count}
-      </span>
+      <span>{label}</span>
+      <small>{count}</small>
     </button>
   );
 }
 
-// ─── QR Code Modal ────────────────────────────────────────────────────────────
+function GridFlow({ pending, approved, error, loading }) {
+  return (
+    <div className="grid-flow" aria-label="Live grid routing overview">
+      <div className="grid-flow-head">
+        <div>
+          <span className="grid-flow-index">Live route</span>
+          <h2>Energy request path</h2>
+        </div>
+        <Activity aria-hidden="true" />
+      </div>
+
+      <div className="grid-flow-track">
+        <div className="flow-point">
+          <span className="flow-node"><SunMedium /></span>
+          <p>Solar nodes</p>
+          <small>Supply online</small>
+        </div>
+        <div className="flow-connector"><i /></div>
+        <div className="flow-point is-focus">
+          <span className="flow-node"><Rows3 /></span>
+          <p>Review queue</p>
+          <small>{loading ? 'Syncing' : pending + ' awaiting review'}</small>
+        </div>
+        <div className="flow-connector"><i /></div>
+        <div className="flow-point">
+          <span className="flow-node"><Zap /></span>
+          <p>Dispatch</p>
+          <small>{loading ? 'Syncing' : approved + ' cleared'}</small>
+        </div>
+      </div>
+
+      <div className="grid-flow-foot">
+        <span className={'connection-line' + (error ? ' is-offline' : '')}>
+          <i />
+          {error ? 'API link offline' : 'Controller is receiving live data'}
+        </span>
+        <span>Port 5298</span>
+      </div>
+    </div>
+  );
+}
+
 function QrModal({ reservation, onClose }) {
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [onClose]);
+
   if (!reservation) return null;
 
   const isApproved = String(reservation.status || '').toLowerCase() === 'approved';
   const payload = reservation.qrPayload || (isApproved ? JSON.stringify({
-    type: "SOLAR_MICROGRID_DISPATCH_QR",
-    version: "1.0",
+    type: 'SOLAR_MICROGRID_DISPATCH_QR',
+    version: '1.0',
     reservationId: reservation.id ?? reservation.reservationId,
     prosumerId: reservation.prosumerNic ?? reservation.prosumerId,
     nodeId: reservation.nodeId,
     reservationDate: reservation.reservationDate,
-    status: "Approved",
+    status: 'Approved',
     issuedAt: new Date().toISOString(),
-    securityToken: "APPROVED_DISPATCH"
+    securityToken: 'APPROVED_DISPATCH',
   }) : null);
 
   const qrImageUrl = payload
-    ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(payload)}`
+    ? 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' + encodeURIComponent(payload)
     : null;
 
-  const handleCopy = () => {
+  const handleCopy = async () => {
     if (!payload) return;
-    navigator.clipboard.writeText(payload);
-    setCopied(true);
-    toast.success('QR payload copied to clipboard');
-    setTimeout(() => setCopied(false), 2000);
+
+    try {
+      await navigator.clipboard.writeText(payload);
+      setCopied(true);
+      toast.success('Dispatch token copied');
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error('Could not copy the dispatch token');
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+    <div
+      className="dispatch-modal-overlay"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.94 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.94 }}
-        className="bg-[#101116] border border-[#FFD000]/30 rounded-3xl p-6 max-w-md w-full shadow-2xl relative text-slate-100"
+        initial={{ opacity: 0, y: 18, scale: 0.985 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.985 }}
+        className="dispatch-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="dispatch-pass-title"
       >
-        <div className="flex items-center justify-between pb-4 border-b border-white/10">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-[#FFD000]/15 text-[#FFD000] flex items-center justify-center border border-[#FFD000]/30">
-              <QrCode className="w-4 h-4" />
-            </div>
-            <div>
-              <h3 className="text-base font-bold tracking-tight text-white">Dispatch QR Pass</h3>
-              <p className="text-[11px] text-slate-400">Scan at microgrid station to verify dispatch pass</p>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white flex items-center justify-center transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+        <div className="dispatch-modal-rail">
+          <span>Dispatch pass</span>
+          <strong>{shortReference(reservation.id ?? reservation.reservationId)}</strong>
+          <ShieldCheck aria-hidden="true" />
         </div>
 
-        <div className="my-6 flex flex-col items-center">
+        <div className="dispatch-modal-body">
+          <div className="dispatch-modal-head">
+            <div>
+              <span>Approved reservation</span>
+              <h2 id="dispatch-pass-title">Station verification token</h2>
+            </div>
+            <button type="button" onClick={onClose} aria-label="Close dispatch pass">
+              <X aria-hidden="true" />
+            </button>
+          </div>
+
           {qrImageUrl ? (
-            <>
-              <div className="p-3.5 bg-white rounded-2xl shadow-xl border-4 border-[#FFD000]">
-                <img src={qrImageUrl} alt="Dispatch QR Pass" className="w-48 h-48 rounded-lg" />
+            <div className="dispatch-pass-layout">
+              <div className="qr-instrument">
+                <span className="corner corner-one" />
+                <span className="corner corner-two" />
+                <span className="corner corner-three" />
+                <span className="corner corner-four" />
+                <img src={qrImageUrl} alt="Scannable dispatch verification code" />
               </div>
-              <p className="mt-3.5 text-xs font-mono text-[#FFD000] font-bold tracking-wider">
-                #{String(reservation.id ?? reservation.reservationId).slice(-8).toUpperCase()}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                Prosumer: <span className="text-slate-200 font-semibold">{reservation.prosumerNic ?? reservation.prosumerId}</span>
-              </p>
-            </>
+
+              <div className="dispatch-pass-meta">
+                <div>
+                  <span>Microgrid node</span>
+                  <strong>{reservation.nodeName || reservation.nodeId || 'Solar node'}</strong>
+                </div>
+                <div>
+                  <span>Prosumer</span>
+                  <strong>{reservation.prosumerNic ?? reservation.prosumerId ?? 'Not assigned'}</strong>
+                </div>
+                <div>
+                  <span>Reservation window</span>
+                  <strong>
+                    {reservation.startTime
+                      ? String(reservation.startTime).replace('T', ' ')
+                      : 'See station ledger'}
+                  </strong>
+                </div>
+                <span className="pass-ready"><i /> Ready to scan</span>
+              </div>
+            </div>
           ) : (
-            <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-2xl text-center">
-              <p className="text-red-400 text-sm font-bold">QR Payload Not Available</p>
-              <p className="text-slate-400 text-xs mt-1">
-                This reservation has not been granted an authentic server dispatch token.
-              </p>
+            <div className="dispatch-pass-unavailable">
+              <AlertTriangle aria-hidden="true" />
+              <div>
+                <h3>No verified token</h3>
+                <p>The server has not issued an authentic dispatch payload for this reservation.</p>
+              </div>
             </div>
           )}
-        </div>
 
-        {payload && (
-          <div className="bg-black/60 rounded-2xl p-3.5 border border-white/10 text-left">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[10px] font-bold text-slate-400 tracking-wider uppercase">Cryptographic Token</span>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1 text-[11px] text-[#FFD000] hover:text-yellow-300 font-medium transition-colors"
-              >
-                {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                {copied ? 'Copied' : 'Copy Payload'}
+          {payload && (
+            <div className="token-strip">
+              <div>
+                <span>Encrypted payload</span>
+                <code>{payload}</code>
+              </div>
+              <button type="button" onClick={handleCopy}>
+                {copied ? <Check aria-hidden="true" /> : <Copy aria-hidden="true" />}
+                {copied ? 'Copied' : 'Copy token'}
               </button>
             </div>
-            <pre className="text-[10px] text-slate-300 font-mono overflow-x-auto max-h-24 p-2 bg-black/40 rounded-xl">
-              {payload}
-            </pre>
-          </div>
-        )}
+          )}
 
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="w-full py-3 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-[#0A0A0C] font-black text-xs tracking-wider uppercase shadow-lg shadow-[#FFD000]/20 transition-all"
-          >
-            Close Viewer
+          <button type="button" className="modal-done" onClick={onClose}>
+            Return to ledger
+            <ArrowUpRight aria-hidden="true" />
           </button>
         </div>
       </motion.div>
@@ -266,18 +331,10 @@ function QrModal({ reservation, onClose }) {
   );
 }
 
-const TABLE_HEADERS = [
-  'Reservation ID',
-  'Prosumer NIC',
-  'Node ID',
-  'Capacity (kW)',
-  'Start Time',
-  'End Time',
-  'Status',
-  'Actions',
-];
-
 export default function ReservationDashboard() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
   const [reservations, setReservations] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -293,6 +350,58 @@ export default function ReservationDashboard() {
   const [search, setSearch] = useState('');
   const [loadingId, setLoadingId] = useState(null);
   const [selectedQrReservation, setSelectedQrReservation] = useState(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+
+  const userRole = (user?.role || '').toLowerCase();
+  const isAdmin = userRole === 'admin';
+  const isProsumer = userRole === 'prosumer';
+  const isConsumer = userRole === 'consumer';
+
+  const portalConfig = isAdmin
+    ? {
+        title: 'Grid Operator Portal',
+        badge: 'Live Operator',
+        badgeClass: 'bg-[#FFD000]/15 text-[#FFD000] border-[#FFD000]/30',
+        icon: <ShieldCheck className="w-3 h-3" />,
+        subtitle: 'Smart Solar Microgrid Energy Slot Reservation & Dispatch Control Center',
+        tableTitle: 'Energy Slot Reservation Queue',
+        statPendingLabel: 'Pending Action',
+        statApprovedLabel: 'Approved',
+        statApprovedFutureLabel: 'Approved Future',
+      }
+    : isProsumer
+    ? {
+        title: 'Solar Prosumer Dispatch Portal',
+        badge: 'Solar Producer',
+        badgeClass: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+        icon: <Sun className="w-3 h-3 text-amber-400" />,
+        subtitle: 'Solar Generation Slot Booking, Dispatch Passes & Grid Injection Schedules',
+        tableTitle: 'Energy Injection & Dispatch Reservations',
+        statPendingLabel: 'Pending Verification',
+        statApprovedLabel: 'Active Passes',
+        statApprovedFutureLabel: 'Scheduled Slots',
+      }
+    : {
+        title: 'Clean Energy Consumer Portal',
+        badge: 'Clean Energy Buyer',
+        badgeClass: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
+        icon: <Leaf className="w-3 h-3 text-emerald-400" />,
+        subtitle: 'Smart Solar Microgrid Clean Energy Booking & Grid Consumption Overview',
+        tableTitle: 'Clean Energy Slot Reservations',
+        statPendingLabel: 'Pending Allocation',
+        statApprovedLabel: 'Confirmed Clean Power',
+        statApprovedFutureLabel: 'Upcoming Deliveries',
+      };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success('Logged out successfully');
+      navigate('/login');
+    } catch {
+      navigate('/login');
+    }
+  };
 
   const fetchReservationsAndStats = useCallback(async () => {
     try {
@@ -304,58 +413,65 @@ export default function ReservationDashboard() {
         api.get('/reservations/stats'),
       ]);
 
-      if (reservationsRes.status === 'fulfilled') {
-        const data = (reservationsRes.value.data || []).map((item) => ({
-          id: item.id ?? item.reservationId,
-          ...item,
-        }));
-        setReservations(data);
-
-        if (statsRes.status !== 'fulfilled') {
-          const now = new Date();
-          const total = data.length;
-          const pending = data.filter((r) => !r.status || r.status === 'Pending').length;
-          const approved = data.filter((r) => r.status === 'Approved').length;
-          const rejected = data.filter((r) => r.status === 'Rejected').length;
-          const cancelled = data.filter((r) => r.status === 'Cancelled').length;
-          const approvedFutureReservations = data.filter(
-            (r) => r.status === 'Approved' && new Date(r.startTime) > now
-          ).length;
-
-          setStats({ total, pending, approved, rejected, cancelled, approvedFutureReservations });
-        }
-      } else {
+      if (reservationsRes.status !== 'fulfilled') {
         throw reservationsRes.reason;
       }
 
+      const data = (reservationsRes.value.data || []).map((item) => ({
+        id: item.id ?? item.reservationId,
+        ...item,
+      }));
+      setReservations(data);
+
       if (statsRes.status === 'fulfilled') {
         setStats(statsRes.value.data);
+      } else {
+        const now = new Date();
+        const total = data.length;
+        const pending = data.filter((item) => !item.status || item.status === 'Pending').length;
+        const approved = data.filter((item) => item.status === 'Approved').length;
+        const rejected = data.filter((item) => item.status === 'Rejected').length;
+        const cancelled = data.filter((item) => item.status === 'Cancelled').length;
+        const approvedFutureReservations = data.filter(
+          (item) => item.status === 'Approved' && new Date(item.startTime) > now
+        ).length;
+
+        setStats({ total, pending, approved, rejected, cancelled, approvedFutureReservations });
       }
-    } catch (err) {
-      console.error('Fetch error:', err);
-      setError('Unable to reach the Solar Microgrid API (Port 5298).');
-      toast.error('Failed to load reservations.');
+
+      setLastSyncedAt(new Date());
+    } catch (fetchError) {
+      console.error('Fetch error:', fetchError);
+      setError('Unable to reach the Solar Microgrid API on port 5298.');
+      toast.error('The reservation ledger could not be refreshed.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchReservationsAndStats();
+    const initialSync = window.setTimeout(() => {
+      fetchReservationsAndStats();
+    }, 0);
+
+    return () => window.clearTimeout(initialSync);
   }, [fetchReservationsAndStats]);
 
   const handleStatusUpdate = async (id, status, actionEndpoint) => {
     setLoadingId(id);
+
     try {
-      await api.put(`/reservations/${id}/${actionEndpoint}`);
-      toast.success(`Reservation ${status}!`, {
-        icon: status === 'Approved' ? '✅' : '❌',
+      await api.put('/reservations/' + id + '/' + actionEndpoint);
+      toast.success('Reservation ' + status.toLowerCase() + '.', {
+        icon: status === 'Approved'
+          ? <CircleCheck className="h-5 w-5 text-emerald-500" />
+          : <CircleX className="h-5 w-5 text-red-400" />,
       });
       await fetchReservationsAndStats();
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to update reservation status';
-      console.error('Update error:', err);
-      toast.error(msg);
+    } catch (updateError) {
+      const message = updateError.response?.data?.message || 'Failed to update reservation status.';
+      console.error('Update error:', updateError);
+      toast.error(message);
     } finally {
       setLoadingId(null);
     }
@@ -365,262 +481,319 @@ export default function ReservationDashboard() {
   const handleReject = (id) => handleStatusUpdate(id, 'Rejected', 'reject');
 
   const handleCancel = async (id) => {
-    if (!window.confirm('Are you sure you want to cancel this reservation?')) {
+    if (!window.confirm('Cancel this reservation? This will remove it from the active dispatch plan.')) {
       return;
     }
 
     setLoadingId(id);
+
     try {
-      await api.put(`/reservations/${id}/cancel`, { reason: 'Operator cancelled upon request' });
-      toast.success('Reservation cancelled successfully');
+      await api.put('/reservations/' + id + '/cancel', { reason: 'Operator cancelled upon request' });
+      toast.success('Reservation cancelled.');
       await fetchReservationsAndStats();
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Cancellation failed.';
-      toast.error(msg, { duration: 5000 });
+    } catch (cancelError) {
+      const message = cancelError.response?.data?.message || 'Cancellation failed.';
+      toast.error(message, { duration: 5000 });
     } finally {
       setLoadingId(null);
     }
   };
 
-  const filtered = reservations.filter((res) => {
-    const resStatus = res.status ?? 'Pending';
-    const matchesFilter = filter === 'All' || resStatus.toLowerCase() === filter.toLowerCase();
-    const searchTerm = search.toLowerCase();
-    const prosumer = (res.prosumerNic ?? res.prosumerId ?? res.consumerId ?? '').toLowerCase();
-    const node = (res.nodeId ?? res.microgridNodeId ?? '').toLowerCase();
-    const id = String(res.id ?? res.reservationId ?? '').toLowerCase();
+  const filtered = useMemo(() => reservations.filter((reservation) => {
+    const reservationStatus = reservation.status ?? 'Pending';
+    const matchesFilter = filter === 'All'
+      || String(reservationStatus).toLowerCase() === filter.toLowerCase();
+    const searchTerm = search.trim().toLowerCase();
 
-    return matchesFilter && (prosumer.includes(searchTerm) || node.includes(searchTerm) || id.includes(searchTerm));
-  });
+    if (!searchTerm) return matchesFilter;
+
+    const prosumer = String(
+      reservation.prosumerNic ?? reservation.prosumerId ?? reservation.consumerId ?? ''
+    ).toLowerCase();
+    const node = String(reservation.nodeId ?? reservation.microgridNodeId ?? '').toLowerCase();
+    const id = String(reservation.id ?? reservation.reservationId ?? '').toLowerCase();
+
+    return matchesFilter && (
+      prosumer.includes(searchTerm)
+      || node.includes(searchTerm)
+      || id.includes(searchTerm)
+    );
+  }), [filter, reservations, search]);
+
+  const counts = {
+    All: reservations.length,
+    Pending: Number(stats.pending) || 0,
+    Approved: Number(stats.approved) || 0,
+    Cancelled: Number(stats.cancelled) || 0,
+    Rejected: Number(stats.rejected) || 0,
+  };
+
+  const total = Math.max(Number(stats.total) || reservations.length || 0, 1);
+  const closed = (Number(stats.rejected) || 0) + (Number(stats.cancelled) || 0);
+  const dateLabel = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: '2-digit',
+    month: 'short',
+  }).format(new Date());
 
   return (
-    <div className="dashboard-container text-white min-h-screen">
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          className: 'font-sans font-semibold text-sm rounded-2xl bg-[#16171E] text-white border border-white/10',
-        }}
-      />
+    <div className="operations-shell">
+      <header className="operations-topbar">
+        <Link to="/reservations" className="operations-brand" aria-label="Solar grid reservation ledger">
+          <span className="operations-brand-mark"><SunMedium /></span>
+          <span>
+            <strong>Solis microgrid</strong>
+            <small>Grid operator / station 01</small>
+          </span>
+        </Link>
 
-      <main className="max-w-7xl mx-auto px-6 sm:px-8 py-10">
-        {/* Header Bar */}
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-5 mb-8">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative">
-              <video src={solarGridVideo} autoPlay loop muted playsInline className="w-full h-full object-cover" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h1 className="text-3xl font-black text-white tracking-tight leading-none">
-                  Grid Operator Portal
-                </h1>
-                <span className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 text-[10px] font-bold uppercase tracking-wider">
-                  <ShieldCheck className="w-3 h-3" />
-                  Live Operator
+        <nav className="operations-nav" aria-label="Operator sections">
+          <Link to="/reservations" className="is-current">Reservations</Link>
+          <Link to="/nodes">Solar nodes</Link>
+          <Link to="/scan">Verify pass</Link>
+          {isAdmin && (
+            <Link to="/admin/approvals">Prosumer approvals</Link>
+          )}
+        </nav>
+
+        <div className="operations-topbar-actions">
+          <div className={'operations-connection' + (error ? ' is-offline' : '')}>
+            <i />
+            <span>{error ? 'API offline' : 'Live (5298)'}</span>
+          </div>
+
+          {user ? (
+            <div className="operations-user-pill">
+              <div className="user-avatar-tag">
+                {user.email ? user.email[0].toUpperCase() : <User className="w-3 h-3" />}
+              </div>
+              <div className="user-meta-tag">
+                <span className="user-email-text">{user.email || user.username}</span>
+                <span className={'user-role-badge role-' + (user.role || 'consumer').toLowerCase()}>
+                  {user.role}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 tracking-wide mt-1.5">
-                Smart Solar Microgrid Energy Slot Reservation &amp; Dispatch Control Center
-              </p>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="user-logout-btn"
+                title="Sign out and revoke active session"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Link
-              to="/nodes"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all shadow-md"
-            >
-              Solar Nodes
+          ) : (
+            <Link to="/login" className="user-login-btn">
+              Login
             </Link>
-            <Link
-              to="/scan"
-              className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-[#FFD000] hover:bg-[#FFE033] text-black text-xs font-black transition-all shadow-lg shadow-[#FFD000]/20"
-            >
-              <QrCode className="w-3.5 h-3.5" />
-              Scan QR
-            </Link>
-            <div className="hidden sm:flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 text-xs font-semibold">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-              API Connected (5298)
-            </div>
-            <button
-              onClick={fetchReservationsAndStats}
-              disabled={loading}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-full border border-white/10 bg-[#16171F] hover:bg-[#20222B] text-slate-200 text-xs font-bold transition-all disabled:opacity-50 shadow-md"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
+          )}
         </div>
+      </header>
 
-        {/* 5 Stat Cards - Yellow & Black High Contrast Theme */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-8">
-          {/* Card 1: Total Bookings (Cream Contrast Card) */}
-          <StatCard
-            label="Total Bookings"
-            value={loading ? '…' : stats.total}
-            theme="cream"
-            delay={0}
-            icon={
-              <svg className="w-5 h-5 text-[#0A0A0C]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            }
+      <main className="operations-workspace">
+        {isProsumer && user?.approvalStatus === 'PendingApproval' && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-2xl bg-[#FFD000]/10 border border-[#FFD000]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-black/40"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-[#FFD000]/20 flex items-center justify-center text-[#FFD000] flex-shrink-0">
+                <Clock className="w-5 h-5 animate-pulse" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-[#FFD000]">
+                    Prosumer Verification In Progress
+                  </span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FFD000] animate-ping" />
+                </div>
+                <p className="text-xs text-slate-300 mt-0.5">
+                  Your Prosumer account is awaiting operator authorization. You have full live access to the energy reservation queue and grid telemetry below.
+                </p>
+              </div>
+            </div>
+            <span className="self-start sm:self-auto px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/30 whitespace-nowrap">
+              Awaiting Review
+            </span>
+          </motion.div>
+        )}
+
+        <section className="operations-hero">
+          <div className="operations-heading">
+            <div className="section-coordinate">
+              <span>01</span>
+              <p>Reservation control</p>
+            </div>
+            <h1>
+              Dispatch <em>ledger.</em>
+            </h1>
+            <p className="operations-intro">
+              Review incoming energy requests, clear valid reservations, and keep every solar dispatch traceable.
+            </p>
+            <div className="operations-heading-actions">
+              <button
+                type="button"
+                onClick={fetchReservationsAndStats}
+                disabled={loading}
+                className="sync-control"
+              >
+                <RefreshCw className={loading ? 'is-spinning' : ''} />
+                {loading ? 'Syncing ledger' : 'Sync ledger'}
+              </button>
+              <span>
+                {lastSyncedAt
+                  ? 'Last sync ' + lastSyncedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  : dateLabel}
+              </span>
+            </div>
+          </div>
+
+          <GridFlow
+            pending={Number(stats.pending) || 0}
+            approved={Number(stats.approved) || 0}
+            error={error}
+            loading={loading}
           />
+        </section>
 
-          {/* Card 2: Pending Action (Electric Yellow Highlight Card) */}
-          <StatCard
-            label="Pending Action"
-            value={loading ? '…' : stats.pending}
-            theme="yellow"
-            delay={0.05}
-            icon={
-              <svg className="w-5 h-5 text-[#0A0A0C] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+<section className="telemetry-rail" aria-label="Reservation telemetry">
+          <MetricCell
+            index={0}
+            label="Awaiting decision"
+            value={Number(stats.pending) || 0}
+            note="needs operator review"
+            ratio={((Number(stats.pending) || 0) / total) * 100}
+            tone="solar"
+            loading={loading}
+            priority
           />
-
-          {/* Card 3: Approved (Dark Obsidian Emerald) */}
-          <StatCard
+          <MetricCell
+            index={1}
+            label="All bookings"
+            value={Number(stats.total) || 0}
+            note="in the ledger"
+            ratio={100}
+            loading={loading}
+          />
+          <MetricCell
+            index={2}
             label="Approved"
-            value={loading ? '…' : stats.approved}
-            theme="dark-emerald"
-            delay={0.1}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+            value={Number(stats.approved) || 0}
+            note="cleared to dispatch"
+            ratio={((Number(stats.approved) || 0) / total) * 100}
+            tone="positive"
+            loading={loading}
           />
-
-          {/* Card 4: Approved Future (Dark Obsidian Yellow) */}
-          <StatCard
-            label="Approved Future"
-            value={loading ? '…' : stats.approvedFutureReservations}
-            theme="dark-amber"
-            delay={0.15}
-            subtitle="Scheduled ahead"
-            icon={<Calendar className="w-5 h-5 text-[#FFD000]" />}
+          <MetricCell
+            index={3}
+            label="Scheduled ahead"
+            value={Number(stats.approvedFutureReservations) || 0}
+            note="future windows"
+            ratio={((Number(stats.approvedFutureReservations) || 0) / total) * 100}
+            tone="cool"
+            loading={loading}
           />
-
-          {/* Card 5: Cancelled / Rejected (Dark Obsidian Rose) */}
-          <StatCard
-            label="Cancelled / Rejected"
-            value={loading ? '…' : (stats.rejected + stats.cancelled)}
-            theme="dark-rose"
-            delay={0.2}
-            icon={
-              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            }
+          <MetricCell
+            index={4}
+            label="Closed without dispatch"
+            value={closed}
+            note="cancelled or rejected"
+            ratio={(closed / total) * 100}
+            tone="negative"
+            loading={loading}
           />
-        </div>
+        </section>
 
-        {/* Main Table Container */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2, duration: 0.4 }}
-          className="glass-card overflow-hidden rounded-3xl"
-        >
-          {/* Controls Bar */}
-          <div className="px-6 sm:px-8 py-6 border-b border-white/[0.06] flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-bold text-white tracking-tight leading-none">
-                Energy Slot Reservation Queue
-              </h2>
-              <p className="text-xs text-slate-400 tracking-wide mt-1.5">
-                Showing <span className="text-[#FFD000] font-bold">{filtered.length}</span> of <span className="text-white font-bold">{reservations.length}</span> live records
-              </p>
+        <section className="dispatch-ledger">
+          <div className="ledger-heading-row">
+            <div className="ledger-heading-copy">
+              <div className="section-coordinate">
+                <span>02</span>
+                <p>Live request book</p>
+              </div>
+              <h2>Reservation queue</h2>
+              <p>{filtered.length} of {reservations.length} records visible</p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-              {/* Search input */}
-              <div className="relative flex-1 sm:flex-initial">
-                <svg
-                  className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
+            <div className="ledger-tools">
+              <label className="ledger-search">
+                <Search aria-hidden="true" />
+                <span className="sr-only">Search reservations</span>
                 <input
-                  type="text"
-                  placeholder="Search NIC, Node, ID..."
+                  type="search"
+                  placeholder="Find NIC, node or reference"
                   value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-10 pr-4 py-2 rounded-full bg-white/[0.04] border border-white/10 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 tracking-wide w-full sm:w-60 transition-all"
+                  onChange={(event) => setSearch(event.target.value)}
                 />
-              </div>
+                {search && (
+                  <button type="button" onClick={() => setSearch('')} aria-label="Clear search">
+                    <X aria-hidden="true" />
+                  </button>
+                )}
+              </label>
 
-              {/* Filter Pills */}
-              <div className="flex items-center gap-1.5 overflow-x-auto py-1">
-                {['All', 'Pending', 'Approved', 'Cancelled', 'Rejected'].map((f) => {
-                  const counts = {
-                    All: reservations.length,
-                    Pending: stats.pending,
-                    Approved: stats.approved,
-                    Cancelled: stats.cancelled,
-                    Rejected: stats.rejected,
-                  };
-                  return (
-                    <FilterPill
-                      key={f}
-                      label={f}
-                      active={filter === f}
-                      count={counts[f] ?? 0}
-                      onClick={() => setFilter(f)}
-                    />
-                  );
-                })}
+              <div className="ledger-shortcuts">
+                <Link to="/nodes">
+                  <Network aria-hidden="true" />
+                  Nodes
+                </Link>
+                <Link to="/scan" className="is-accent">
+                  <ScanLine aria-hidden="true" />
+                  Scan pass
+                </Link>
               </div>
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
+          <div className="ledger-filter-row">
+            {FILTERS.map((filterName) => (
+              <FilterTab
+                key={filterName}
+                label={filterName}
+                active={filter === filterName}
+                count={counts[filterName] ?? 0}
+                onClick={() => setFilter(filterName)}
+              />
+            ))}
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.12, duration: 0.32 }}
+            className="ledger-table-wrap"
+          >
             {error ? (
               <ErrorState message={error} onRetry={fetchReservationsAndStats} />
             ) : (
-              <table className="w-full text-left border-collapse">
+              <table className="reservation-ledger-table">
                 <thead>
-                  <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-                    {TABLE_HEADERS.map((h) => (
-                      <th
-                        key={h}
-                        className="px-6 py-4 text-[11px] font-black text-slate-400 tracking-wider uppercase"
-                      >
-                        {h}
-                      </th>
-                    ))}
+                  <tr>
+                    {TABLE_HEADERS.map((header) => <th key={header}>{header}</th>)}
                   </tr>
                 </thead>
                 <tbody>
                   {loading ? (
-                    [...Array(6)].map((_, i) => <SkeletonRow key={i} index={i} />)
+                    [...Array(5)].map((_, index) => <SkeletonRow key={index} index={index} />)
                   ) : (
                     <AnimatePresence mode="popLayout">
                       {filtered.length === 0 ? (
-                        <tr key="empty">
-                          <td colSpan={8}>
-                            <EmptyState filter={filter} />
-                          </td>
+                        <tr key="empty" className="ledger-empty-row">
+                          <td colSpan={8}><EmptyState filter={filter} /></td>
                         </tr>
                       ) : (
-                        filtered.map((reservation, i) => (
+                        filtered.map((reservation, index) => (
                           <ReservationRow
-                            key={reservation.id ?? reservation.reservationId ?? i}
+                            key={reservation.id ?? reservation.reservationId ?? index}
                             reservation={reservation}
                             onApprove={handleApprove}
                             onReject={handleReject}
                             onCancel={handleCancel}
-                            onViewQr={(res) => setSelectedQrReservation(res)}
+                            onViewQr={setSelectedQrReservation}
                             loadingId={loadingId}
-                            index={i}
+                            index={index}
+                            userRole={user?.role}
                           />
                         ))
                       )}
@@ -629,11 +802,10 @@ export default function ReservationDashboard() {
                 </tbody>
               </table>
             )}
-          </div>
-        </motion.div>
+          </motion.div>
+        </section>
       </main>
 
-      {/* QR Code Modal for Approved Bookings */}
       <AnimatePresence>
         {selectedQrReservation && (
           <QrModal
