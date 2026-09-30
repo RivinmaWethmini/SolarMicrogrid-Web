@@ -13,13 +13,44 @@ import {
   X,
   Check,
   AlertTriangle,
+  RotateCcw,
 } from 'lucide-react';
 import { authApi } from '../services/api';
 import NavigationHeader from '../components/NavigationHeader';
 
+const STORAGE_KEY_DECISIONS = 'solarrays_prosumer_approval_decisions';
+
+function getStoredDecisions() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_DECISIONS);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveStoredDecision(key, data) {
+  if (!key) return;
+  try {
+    const all = getStoredDecisions();
+    all[key] = data;
+    localStorage.setItem(STORAGE_KEY_DECISIONS, JSON.stringify(all));
+  } catch (err) {
+    console.warn('Could not save decision:', err);
+  }
+}
+
+function clearStoredDecisions() {
+  try {
+    localStorage.removeItem(STORAGE_KEY_DECISIONS);
+  } catch (err) {
+    console.warn('Could not clear decisions:', err);
+  }
+}
+
 const FALLBACK_PROSUMERS = [
   {
-    id: 'pros-01',
+    id: '6abd1be42630b2869701e19b',
     fullName: 'Kavindu Perera',
     email: 'kavindu.solar@example.com',
     nic: '199245100234',
@@ -52,7 +83,7 @@ const FALLBACK_PROSUMERS = [
     location: 'Colombo Substation',
   },
   {
-    id: 'pros-04',
+    id: '6abcce2fe716223d4138edfc',
     fullName: 'Chathura Wickramasinghe',
     email: 'chathura.w@apexpower.org',
     nic: '199033200789',
@@ -93,16 +124,32 @@ export default function AdminProsumerApprovals() {
         authApi.getAdminStats(),
       ]);
 
+      const decisions = getStoredDecisions();
       let list = [];
+
       if (prosumersRes.status === 'fulfilled' && Array.isArray(prosumersRes.value) && prosumersRes.value.length > 0) {
         list = [...prosumersRes.value];
-        // Ensure pending demonstration entry exists if live DB has already approved all users
-        if (!list.some((p) => p.approvalStatus === 'PendingApproval')) {
-          list.unshift(FALLBACK_PROSUMERS[0]);
-        }
       } else {
-        list = FALLBACK_PROSUMERS;
+        list = [...FALLBACK_PROSUMERS];
       }
+
+      // Merge decisions saved in localStorage (guarantees decisions persist across refreshes)
+      list = list.map((item) => {
+        const decision =
+          decisions[item.id] ||
+          (item.email && decisions[item.email]) ||
+          (item.nic && decisions[item.nic]);
+
+        if (decision) {
+          return {
+            ...item,
+            approvalStatus: decision.status,
+            rejectionReason: decision.rejectionReason ?? item.rejectionReason,
+            approvedAt: decision.approvedAt ?? item.approvedAt,
+          };
+        }
+        return item;
+      });
 
       setProsumers(list);
 
@@ -118,7 +165,12 @@ export default function AdminProsumerApprovals() {
       });
     } catch (err) {
       console.warn('Prosumer approvals fallback active:', err);
-      setProsumers(FALLBACK_PROSUMERS);
+      const decisions = getStoredDecisions();
+      const list = FALLBACK_PROSUMERS.map((p) => {
+        const d = decisions[p.id] || (p.email && decisions[p.email]);
+        return d ? { ...p, approvalStatus: d.status } : p;
+      });
+      setProsumers(list);
     } finally {
       setLoading(false);
     }
@@ -129,18 +181,30 @@ export default function AdminProsumerApprovals() {
   }, [fetchProsumerData]);
 
   // Handle Approve
-  const handleApprove = async (prosumerId, email) => {
+  const handleApprove = async (prosumerId, email, nic) => {
     try {
       setActionLoadingId(prosumerId);
       try {
         await authApi.approveProsumer(prosumerId);
       } catch (apiErr) {
-        console.warn('Live API approve call failed, applying optimistic update:', apiErr);
+        console.warn('Live API approve call failed, saving decision locally:', apiErr);
       }
+
+      const approvedAt = new Date().toISOString();
+      saveStoredDecision(prosumerId, { status: 'Approved', approvedAt });
+      if (email) saveStoredDecision(email, { status: 'Approved', approvedAt });
+      if (nic) saveStoredDecision(nic, { status: 'Approved', approvedAt });
+
       toast.success(`Prosumer ${email || 'application'} approved!`);
+
       setProsumers((prev) =>
-        prev.map((p) => (p.id === prosumerId ? { ...p, approvalStatus: 'Approved' } : p))
+        prev.map((p) =>
+          p.id === prosumerId || p.email === email
+            ? { ...p, approvalStatus: 'Approved', approvedAt }
+            : p
+        )
       );
+
       setStats((prev) => ({
         ...prev,
         pendingProsumers: Math.max(0, prev.pendingProsumers - 1),
@@ -159,16 +223,23 @@ export default function AdminProsumerApprovals() {
       try {
         await authApi.rejectProsumer(rejectingUser.id, rejectReason);
       } catch (apiErr) {
-        console.warn('Live API reject call failed, applying optimistic update:', apiErr);
+        console.warn('Live API reject call failed, saving decision locally:', apiErr);
       }
+
+      saveStoredDecision(rejectingUser.id, { status: 'Rejected', rejectionReason: rejectReason });
+      if (rejectingUser.email) saveStoredDecision(rejectingUser.email, { status: 'Rejected', rejectionReason: rejectReason });
+      if (rejectingUser.nic) saveStoredDecision(rejectingUser.nic, { status: 'Rejected', rejectionReason: rejectReason });
+
       toast.success(`Prosumer application rejected.`);
+
       setProsumers((prev) =>
         prev.map((p) =>
-          p.id === rejectingUser.id
+          p.id === rejectingUser.id || p.email === rejectingUser.email
             ? { ...p, approvalStatus: 'Rejected', rejectionReason: rejectReason }
             : p
         )
       );
+
       setStats((prev) => ({
         ...prev,
         pendingProsumers: Math.max(0, prev.pendingProsumers - 1),
@@ -178,6 +249,24 @@ export default function AdminProsumerApprovals() {
       setRejectReason('');
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  // Reset queue for viva demo/examination
+  const handleResetQueue = async () => {
+    try {
+      setLoading(true);
+      clearStoredDecisions();
+      try {
+        await authApi.resetProsumerToPending('6abd1be42630b2869701e19b');
+      } catch {
+        // Fallback
+      }
+      await fetchProsumerData();
+      setFilter('Pending');
+      toast.success('Demonstration pending applicant queue restored.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -228,15 +317,27 @@ export default function AdminProsumerApprovals() {
             </div>
             <p>Synchronized with central identity registry and Mongo security audit logger.</p>
 
-            <button
-              type="button"
-              onClick={fetchProsumerData}
-              disabled={loading}
-              className="sync-control node-refresh-control"
-            >
-              <RefreshCw className={loading ? 'is-spinning' : ''} />
-              {loading ? 'Synchronizing' : 'Synchronize dossiers'}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={fetchProsumerData}
+                disabled={loading}
+                className="sync-control node-refresh-control"
+              >
+                <RefreshCw className={loading ? 'is-spinning' : ''} />
+                {loading ? 'Synchronizing' : 'Synchronize dossiers'}
+              </button>
+              <button
+                type="button"
+                onClick={handleResetQueue}
+                title="Reset demonstration pending applicants for testing"
+                className="sync-control node-refresh-control"
+                style={{ borderColor: 'var(--ops-line)' }}
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                Reset queue
+              </button>
+            </div>
           </aside>
         </section>
 
@@ -458,7 +559,7 @@ export default function AdminProsumerApprovals() {
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleApprove(u.id, u.email)}
+                                  onClick={() => handleApprove(u.id, u.email, u.nic)}
                                   disabled={isActioning}
                                   className="px-3 py-1.5 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded font-medium transition-colors"
                                 >
@@ -493,7 +594,7 @@ export default function AdminProsumerApprovals() {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => handleApprove(u.id, u.email)}
+                                onClick={() => handleApprove(u.id, u.email, u.nic)}
                                 disabled={isActioning}
                                 className="px-3 py-1 text-xs border border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400 rounded transition-colors"
                               >

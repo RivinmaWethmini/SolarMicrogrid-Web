@@ -266,6 +266,11 @@ export const authApi = {
     return response.data;
   },
 
+  resetProsumerToPending: async (id) => {
+    const response = await api.put(`/admin/prosumers/${id}/pending`);
+    return response.data;
+  },
+
   getAdminStats: async () => {
     const response = await api.get('/admin/stats');
     return response.data;
