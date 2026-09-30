@@ -98,13 +98,31 @@
 
   /* ── Node Management utility classes ────────────────────────────────────── */
   .node-card {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-sm;
+    background: #111410;
+    border: 1px solid #2a2f27;
+    border-radius: 4px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
   }
   .node-input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5
-           text-sm text-slate-800 placeholder-slate-400
-           focus:outline-none focus:border-emerald-500
-           focus:ring-2 focus:ring-emerald-500/20 transition-all;
+    width: 100%;
+    min-height: 44px;
+    padding: 0 14px;
+    background: #151914;
+    border: 1px solid #41483b;
+    color: #f0f0e8;
+    font-size: 13px;
+    border-radius: 4px;
+    outline: none;
+    box-shadow: none;
+    box-sizing: border-box;
+    transition: border-color 0.18s, box-shadow 0.18s;
+  }
+  .node-input::placeholder {
+    color: #666c63;
+  }
+  .node-input:focus {
+    border-color: #e9f85b;
+    box-shadow: 0 0 0 2px rgba(233, 248, 91, 0.18);
   }
   .summary-card {
     @apply node-card p-5 flex flex-col gap-1;
@@ -5342,67 +5360,148 @@
 }
 
 /* ==========================================================================
-   Prosumer Management Page Dark Theme Overrides (.prosumer-page)
+   Operations & Prosumer Management Unified Dark Theme Styles
    ========================================================================== */
 
-.prosumer-page {
-  background: var(--ops-bg) !important;
-  color: var(--ops-text) !important;
-  min-height: 100vh;
-}
-
-.prosumer-page .text-slate-900 {
-  color: #ffffff !important;
-}
-
-.prosumer-page .text-slate-800 {
-  color: #f0f0e8 !important;
-}
-
-.prosumer-page .text-slate-700 {
-  color: var(--ops-muted) !important;
-}
-
-.prosumer-page .text-slate-500 {
-  color: var(--ops-dim) !important;
-}
-
-.prosumer-page .bg-slate-50 {
-  background: rgba(255, 255, 255, 0.02) !important;
-}
-
-.prosumer-page .border-slate-200,
-.prosumer-page .border-slate-100 {
-  border-color: var(--ops-line) !important;
-}
-
-.prosumer-page .divide-slate-100 > :not([hidden]) ~ :not([hidden]) {
-  border-color: rgba(255, 255, 255, 0.04) !important;
-}
-
-.prosumer-page .summary-card {
-  background: var(--ops-panel) !important;
-  border: 1px solid var(--ops-line) !important;
-}
-
-.prosumer-page .node-card {
-  background: var(--ops-panel) !important;
-  border: 1px solid var(--ops-line) !important;
-}
-
-.prosumer-page .node-input {
+/* Universal node-input dark styles */
+.operations-shell .node-input,
+.node-input {
+  width: 100% !important;
   background: #151914 !important;
-  border: 1px solid var(--ops-line-strong) !important;
-  color: var(--ops-text) !important;
+  border: 1px solid var(--ops-line-strong, #41483b) !important;
+  color: var(--ops-text, #f0f0e8) !important;
+  font-family: var(--sans, inherit) !important;
+  font-size: 13px !important;
+  border-radius: 4px !important;
+  outline: none !important;
+  box-shadow: none !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.18s, box-shadow 0.18s;
 }
 
-.prosumer-page .node-input:focus {
-  border-color: var(--ops-solar) !important;
+.operations-shell .node-input:focus,
+.node-input:focus {
+  border-color: var(--ops-solar, #e9f85b) !important;
   box-shadow: 0 0 0 2px rgba(233, 248, 91, 0.18) !important;
 }
 
-.prosumer-page .bg-blue-100 {
-  background: rgba(146, 185, 255, 0.12) !important;
-  color: var(--ops-cool) !important;
-  border: 1px solid rgba(146, 185, 255, 0.3) !important;
+.operations-shell .node-input::placeholder,
+.node-input::placeholder {
+  color: var(--ops-dim, #666c63) !important;
 }
+
+/* Select inputs inside operations-shell */
+.operations-shell select.node-input,
+select.node-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2392988d' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 36px !important;
+}
+
+/* Form group & labels */
+.node-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.node-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ops-muted, #92988d);
+}
+
+.node-required {
+  color: var(--ops-solar, #e9f85b);
+  margin-left: 3px;
+}
+
+/* Table frame and node-table */
+.node-table-frame {
+  background: var(--ops-panel, #111410);
+  border: 1px solid var(--ops-line, #2a2f27);
+  overflow-x: auto;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+  border-radius: 4px;
+}
+
+.node-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.node-table th {
+  padding: 13px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--ops-line-strong, #41483b);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ops-muted, #92988d);
+  white-space: nowrap;
+}
+
+.node-table th:first-child,
+.node-table td:first-child {
+  padding-left: 20px;
+}
+
+.node-table th:last-child,
+.node-table td:last-child {
+  padding-right: 20px;
+}
+
+.prosumer-table-row td {
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--ops-line, #2a2f27);
+  font-size: 12px;
+  color: var(--ops-text, #f0f0e8);
+  vertical-align: middle;
+}
+
+.prosumer-table-row:hover td {
+  background: rgba(233, 248, 91, 0.03);
+}
+
+.prosumer-table-row:last-child td {
+  border-bottom: 0;
+}
+
+/* Secondary command button (Cancel) */
+.node-command.is-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 22px;
+  background: transparent;
+  border: 1px solid var(--ops-line-strong, #41483b);
+  color: var(--ops-muted, #92988d);
+  font-family: var(--sans, inherit);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 160ms ease;
+}
+
+.node-command.is-secondary:hover:not(:disabled) {
+  border-color: var(--ops-solar, #e9f85b);
+  color: var(--ops-text, #f0f0e8);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+/* Spacing helpers */
+.mt-6 { margin-top: 24px; }
+.mt-8 { margin-top: 32px; }
+.mt-10 { margin-top: 40px; }

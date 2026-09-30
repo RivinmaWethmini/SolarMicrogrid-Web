@@ -9,7 +9,8 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
   const navigate = useNavigate();
 
   const userRole = (user?.role || '').toLowerCase();
-  const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
+  const isAdmin = userRole === 'admin';
+  const isBackoffice = isAdmin || userRole === 'backoffice';
   const isOperator = userRole === 'gridoperator';
 
   const handleLogout = async () => {
@@ -79,14 +80,6 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
             className={isActive('/scan') ? 'is-current' : ''}
           >
             Verify pass
-          </Link>
-        )}
-        {isAdmin && (
-          <Link
-            to="/admin/approvals"
-            className={isActive('/admin/approvals') ? 'is-current' : ''}
-          >
-            Prosumer approvals
           </Link>
         )}
       </nav>

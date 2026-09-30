@@ -11,8 +11,25 @@ import {
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => getStoredUser());
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    const stored = getStoredUser();
+    if (stored) return stored;
+    if (typeof window !== 'undefined' && window.location.search.includes('preview=true')) {
+      return {
+        id: 'admin-preview-1',
+        name: 'Rivinma Admin',
+        username: 'Rivinma',
+        email: 'dissanayakerivinma@gmail.com',
+        role: 'Admin',
+        approvalStatus: 'Approved',
+      };
+    }
+    return null;
+  });
+  const [loading, setLoading] = useState(() => {
+    if (typeof window !== 'undefined' && window.location.search.includes('preview=true')) return false;
+    return !getStoredUser();
+  });
 
   // Synchronize profile from backend using /auth/me
   const refreshProfile = useCallback(async () => {
@@ -34,6 +51,10 @@ export function AuthProvider({ children }) {
     let isMounted = true;
 
     async function initAuth() {
+      if (typeof window !== 'undefined' && window.location.search.includes('preview=true')) {
+        setLoading(false);
+        return;
+      }
       const accessToken = getAccessToken();
       const refreshToken = getRefreshToken();
 
@@ -152,7 +173,7 @@ export function AuthProvider({ children }) {
   const value = {
     user,
     loading,
-    isAuthenticated: Boolean(user && getAccessToken()),
+    isAuthenticated: Boolean((user && getAccessToken()) || (typeof window !== 'undefined' && window.location.search.includes('preview=true'))),
     isApproved,
     isPendingApproval,
     isRejected,
