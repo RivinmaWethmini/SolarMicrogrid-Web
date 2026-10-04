@@ -8,11 +8,15 @@ import {
   Users,
   Zap,
   BatteryCharging,
-  ArrowLeft,
   Plus,
+  Edit3,
+  Power,
+  RotateCcw,
+  ShieldCheck,
+  Search,
 } from 'lucide-react';
 
-import ProsumerRow from '../components/ProsumerRow';
+import NavigationHeader from '../components/NavigationHeader';
 import {
   getProsumers,
   createProsumer,
@@ -34,31 +38,53 @@ const emptyForm = {
 
 function getErrorMessage(error, fallback) {
   const data = error?.response?.data;
-
-  if (typeof data === 'string') {
-    return data;
-  }
-
-  if (data?.message) {
-    return data.message;
-  }
-
-  if (data?.title) {
-    return data.title;
-  }
-
-  if (data?.errors) {
-    return Object.values(data.errors).flat().join(' ');
-  }
-
+  if (typeof data === 'string') return data;
+  if (data?.message) return data.message;
+  if (data?.title) return data.title;
+  if (data?.errors) return Object.values(data.errors).flat().join(' ');
   return fallback;
+}
+
+function FormField({
+  label,
+  name,
+  value,
+  onChange,
+  type = 'text',
+  placeholder,
+  step,
+  min,
+  max,
+  required = false,
+}) {
+  return (
+    <div className="node-form-group">
+      <label htmlFor={name} className="node-label">
+        {label}
+        {required ? <span className="node-required">*</span> : null}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type={type}
+        step={step}
+        min={min}
+        max={max}
+        value={value}
+        onChange={onChange}
+        placeholder={placeholder}
+        required={required}
+        className="node-input"
+      />
+    </div>
+  );
 }
 
 export default function ProsumerManagement() {
   const [prosumers, setProsumers] = useState([]);
   const [form, setForm] = useState(emptyForm);
-
   const [editingProsumer, setEditingProsumer] = useState(null);
+  const [search, setSearch] = useState('');
 
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,6 +93,7 @@ export default function ProsumerManagement() {
 
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [editError, setEditError] = useState('');
 
   useEffect(() => {
     fetchProsumers();
@@ -76,16 +103,14 @@ export default function ProsumerManagement() {
     if (showLoader) {
       setIsLoadingList(true);
     }
-
     try {
       const response = await getProsumers();
-
-      setProsumers(response.data?.value || response.data || []);
+      setProsumers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       setErrorMsg(
         getErrorMessage(
           error,
-          'Could not load prosumers. Please check the API connection.'
+          'Could not load prosumers. Please verify the API connection.'
         )
       );
     } finally {
@@ -102,14 +127,21 @@ export default function ProsumerManagement() {
 
   function handleFormChange(event) {
     const { name, value } = event.target;
-
     setForm((previous) => ({
       ...previous,
       [name]: value,
     }));
   }
 
-  async function handleSubmit(event) {
+  function handleEditChange(event) {
+    const { name, value } = event.target;
+    setEditingProsumer((previous) => ({
+      ...previous,
+      [name]: value,
+    }));
+  }
+
+  async function handleRegister(event) {
     event.preventDefault();
     clearMessages();
 
@@ -117,51 +149,16 @@ export default function ProsumerManagement() {
       setErrorMsg('NIC is required.');
       return;
     }
-
     if (!form.name.trim()) {
       setErrorMsg('Name is required.');
       return;
     }
-
     if (!form.location.trim()) {
       setErrorMsg('Location is required.');
       return;
     }
 
-    if (
-      form.solarCapacityKw === '' ||
-      Number(form.solarCapacityKw) < 0
-    ) {
-      setErrorMsg('Solar capacity must be zero or greater.');
-      return;
-    }
-
-    if (
-      form.batteryCapacityKwh === '' ||
-      Number(form.batteryCapacityKwh) < 0
-    ) {
-      setErrorMsg('Battery capacity must be zero or greater.');
-      return;
-    }
-
-    if (
-      form.availableEnergyKw === '' ||
-      Number(form.availableEnergyKw) < 0
-    ) {
-      setErrorMsg('Available energy must be zero or greater.');
-      return;
-    }
-
-    if (
-      form.pricePerKwh === '' ||
-      Number(form.pricePerKwh) < 0
-    ) {
-      setErrorMsg('Price per kWh must be zero or greater.');
-      return;
-    }
-
     setIsSubmitting(true);
-
     try {
       const payload = {
         nic: form.nic.trim(),
@@ -175,73 +172,19 @@ export default function ProsumerManagement() {
       };
 
       await createProsumer(payload);
-
       setForm(emptyForm);
       setSuccessMsg('Prosumer registered successfully.');
-
       await fetchProsumers(false);
     } catch (error) {
-      setErrorMsg(
-        getErrorMessage(
-          error,
-          'Failed to register the prosumer.'
-        )
-      );
+      setErrorMsg(getErrorMessage(error, 'Failed to register prosumer.'));
     } finally {
       setIsSubmitting(false);
     }
   }
 
-  async function handleDeactivate(nic) {
-    clearMessages();
-    setLoadingId(nic);
-
-    try {
-      await deactivateProsumer(nic);
-
-      setSuccessMsg('Prosumer deactivated successfully.');
-
-      await fetchProsumers(false);
-    } catch (error) {
-      setErrorMsg(
-        getErrorMessage(
-          error,
-          'Could not deactivate the prosumer.'
-        )
-      );
-    } finally {
-      setLoadingId(null);
-    }
-  }
-
-  async function handleReactivate(nic) {
-    clearMessages();
-    setLoadingId(nic);
-
-    try {
-      await reactivateProsumer(nic);
-
-      setSuccessMsg('Prosumer reactivated successfully.');
-
-      await fetchProsumers(false);
-    } catch (error) {
-      setErrorMsg(
-        getErrorMessage(
-          error,
-          'Could not reactivate the prosumer.'
-        )
-      );
-    } finally {
-      setLoadingId(null);
-    }
-  }
-
-  function handleEdit(prosumer) {
-    clearMessages();
-
+  function startEdit(prosumer) {
     setEditingProsumer({
-      nic: prosumer.nic,
-      name: prosumer.name || '',
+      ...prosumer,
       solarCapacityKw: prosumer.solarCapacityKw ?? '',
       batteryCapacityKwh: prosumer.batteryCapacityKwh ?? '',
       availableEnergyKw: prosumer.availableEnergyKw ?? '',
@@ -249,60 +192,30 @@ export default function ProsumerManagement() {
       location: prosumer.location || '',
       microgridNodeId: prosumer.microgridNodeId || '',
     });
+    setEditError('');
+  }
+
+  function closeEditModal() {
+    if (isUpdating) return;
+    setEditingProsumer(null);
+    setEditError('');
   }
 
   async function handleUpdate(event) {
     event.preventDefault();
-    clearMessages();
+    setEditError('');
 
-    if (!editingProsumer) {
-      return;
-    }
-
+    if (!editingProsumer) return;
     if (!editingProsumer.name.trim()) {
-      setErrorMsg('Name is required.');
+      setEditError('Name is required.');
       return;
     }
-
     if (!editingProsumer.location.trim()) {
-      setErrorMsg('Location is required.');
-      return;
-    }
-
-    if (
-      editingProsumer.solarCapacityKw === '' ||
-      Number(editingProsumer.solarCapacityKw) < 0
-    ) {
-      setErrorMsg('Solar capacity must be zero or greater.');
-      return;
-    }
-
-    if (
-      editingProsumer.batteryCapacityKwh === '' ||
-      Number(editingProsumer.batteryCapacityKwh) < 0
-    ) {
-      setErrorMsg('Battery capacity must be zero or greater.');
-      return;
-    }
-
-    if (
-      editingProsumer.availableEnergyKw === '' ||
-      Number(editingProsumer.availableEnergyKw) < 0
-    ) {
-      setErrorMsg('Available energy must be zero or greater.');
-      return;
-    }
-
-    if (
-      editingProsumer.pricePerKwh === '' ||
-      Number(editingProsumer.pricePerKwh) < 0
-    ) {
-      setErrorMsg('Price per kWh must be zero or greater.');
+      setEditError('Location is required.');
       return;
     }
 
     setIsUpdating(true);
-
     try {
       const payload = {
         nic: editingProsumer.nic,
@@ -312,121 +225,132 @@ export default function ProsumerManagement() {
         availableEnergyKw: Number(editingProsumer.availableEnergyKw),
         pricePerKwh: Number(editingProsumer.pricePerKwh),
         location: editingProsumer.location.trim(),
-        microgridNodeId:
-          editingProsumer.microgridNodeId.trim() || null,
+        microgridNodeId: editingProsumer.microgridNodeId?.trim() || null,
       };
 
       await updateProsumer(editingProsumer.nic, payload);
-
       setEditingProsumer(null);
-      setSuccessMsg('Prosumer updated successfully.');
-
+      setSuccessMsg('Prosumer specs updated successfully.');
       await fetchProsumers(false);
     } catch (error) {
-      setErrorMsg(
-        getErrorMessage(
-          error,
-          'Failed to update the prosumer.'
-        )
-      );
+      setEditError(getErrorMessage(error, 'Failed to update prosumer specs.'));
     } finally {
       setIsUpdating(false);
     }
   }
 
-  const activeCount = prosumers.filter(
-    (prosumer) => prosumer.isAvailable === true
-  ).length;
+  async function handleDeactivate(nic) {
+    clearMessages();
+    setLoadingId(nic);
+    try {
+      await deactivateProsumer(nic);
+      setSuccessMsg('Prosumer deactivated successfully.');
+      await fetchProsumers(false);
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error, 'Could not deactivate prosumer.'));
+    } finally {
+      setLoadingId(null);
+    }
+  }
 
+  async function handleReactivate(nic) {
+    clearMessages();
+    setLoadingId(nic);
+    try {
+      await reactivateProsumer(nic);
+      setSuccessMsg('Prosumer reactivated successfully.');
+      await fetchProsumers(false);
+    } catch (error) {
+      setErrorMsg(getErrorMessage(error, 'Could not reactivate prosumer.'));
+    } finally {
+      setLoadingId(null);
+    }
+  }
+
+  const activeCount = prosumers.filter((p) => p.isAvailable === true).length;
   const inactiveCount = prosumers.length - activeCount;
 
+  const filteredProsumers = prosumers.filter((p) => {
+    const term = search.toLowerCase();
+    const nic = (p.nic || '').toLowerCase();
+    const name = (p.name || '').toLowerCase();
+    const loc = (p.location || '').toLowerCase();
+    return nic.includes(term) || name.includes(term) || loc.includes(term);
+  });
+
   return (
-    <main className="prosumer-page min-h-screen">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
+    <div className="operations-shell">
+      <NavigationHeader subtitle="Prosumer registry" />
 
-        {/* Header */}
-        <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <Link
-              to="/reservations"
-              className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Dashboard
-            </Link>
+      <main className="operations-workspace node-workspace">
+        {/* Unified Hero Section */}
+        <section className="node-hero" aria-labelledby="prosumer-title">
+          <div className="operations-heading node-heading">
+            <div className="section-coordinate">
+              <span>01</span>
+              <p>User Infrastructure / Prosumer Registry</p>
+            </div>
 
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-700">
-              <Users className="h-3.5 w-3.5" />
-              Backoffice
-            </span>
-
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Prosumer Management
+            <h1 id="prosumer-title">
+              Prosumer <em>registry.</em>
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Register, update and control prosumer profiles.
+            <p className="operations-intro">
+              Register, calibrate hardware specifications, activate tariffs, and manage distributed solar energy prosumer profiles across grid clusters.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => fetchProsumers()}
-            disabled={isLoadingList}
-            className="secondary-btn"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${
-                isLoadingList ? 'animate-spin' : ''
-              }`}
-            />
-            Refresh
-          </button>
+          <aside className="node-hero-console" aria-label="Prosumer registry control">
+            <span className="node-console-index">Prosumer Asset Control</span>
+            <div className="node-console-status">
+              <i aria-hidden="true" />
+              Registry synchronized
+            </div>
+            <p>Pulling real-time generation capacity, battery storage, and dynamic tariffs.</p>
+
+            <button
+              type="button"
+              onClick={() => fetchProsumers()}
+              disabled={isLoadingList}
+              className="sync-control node-refresh-control"
+            >
+              <RefreshCw className={isLoadingList ? 'is-spinning' : ''} />
+              {isLoadingList ? 'Synchronizing' : 'Synchronize prosumers'}
+            </button>
+          </aside>
         </section>
 
-        {/* Summary cards */}
-        <section className="grid gap-4 sm:grid-cols-3">
-          <div className="summary-card">
-            <div className="mb-1 flex items-center gap-2">
-              <Users className="h-4 w-4 text-slate-500" />
-              <span className="summary-label">
-                Total Prosumers
-              </span>
+        {/* Telemetry Metrics Rail */}
+        <section className="node-metrics" aria-label="Prosumer registry telemetry">
+          <article className="node-metric">
+            <div className="node-metric-head">
+              <span>01 / Registered</span>
+              <Users aria-hidden="true" />
             </div>
+            <strong>{prosumers.length}</strong>
+            <p>Total prosumer profiles</p>
+          </article>
 
-            <strong className="summary-number text-slate-900">
-              {prosumers.length}
-            </strong>
-          </div>
-
-          <div className="summary-card">
-            <div className="mb-1 flex items-center gap-2">
-              <Zap className="h-4 w-4 text-emerald-600" />
-              <span className="summary-label">
-                Active Prosumers
-              </span>
+          <article className="node-metric is-positive">
+            <div className="node-metric-head">
+              <span>02 / Active</span>
+              <Zap aria-hidden="true" />
             </div>
+            <strong>{activeCount}</strong>
+            <p>Trading authorized & active</p>
+          </article>
 
-            <strong className="summary-number text-emerald-600">
-              {activeCount}
-            </strong>
-          </div>
-
-          <div className="summary-card">
-            <div className="mb-1 flex items-center gap-2">
-              <BatteryCharging className="h-4 w-4 text-slate-500" />
-              <span className="summary-label">
-                Inactive Prosumers
-              </span>
+          <article className="node-metric is-muted">
+            <div className="node-metric-head">
+              <span>03 / Inactive</span>
+              <BatteryCharging aria-hidden="true" />
             </div>
-
-            <strong className="summary-number text-slate-500">
-              {inactiveCount}
-            </strong>
-          </div>
+            <strong>{inactiveCount}</strong>
+            <p>Deactivated or paused profiles</p>
+          </article>
         </section>
 
-        {/* Messages */}
+        {/* Status Notices */}
         <AnimatePresence mode="wait">
           {errorMsg && (
             <motion.div
@@ -434,17 +358,17 @@ export default function ProsumerManagement() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="alert-error"
+              className="node-notice is-error mt-6"
+              role="alert"
             >
               <span>{errorMsg}</span>
-
               <button
                 type="button"
                 onClick={() => setErrorMsg('')}
-                aria-label="Close error message"
-                className="flex items-center justify-center"
+                aria-label="Close error notice"
+                className="node-notice-close"
               >
-                <X className="h-3.5 w-3.5" />
+                <X aria-hidden="true" />
               </button>
             </motion.div>
           )}
@@ -455,231 +379,138 @@ export default function ProsumerManagement() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="alert-success"
+              className="node-notice is-success mt-6"
+              role="status"
             >
               <span>{successMsg}</span>
-
               <button
                 type="button"
                 onClick={() => setSuccessMsg('')}
-                aria-label="Close success message"
-                className="flex items-center justify-center"
+                aria-label="Close success notice"
+                className="node-notice-close"
               >
-                <X className="h-3.5 w-3.5" />
+                <X aria-hidden="true" />
               </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Register New Prosumer */}
+        {/* Register New Prosumer Form Panel */}
         <motion.form
-          onSubmit={handleSubmit}
+          onSubmit={handleRegister}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="node-card p-6 sm:p-8"
+          className="node-panel node-registration-panel mt-8"
+          aria-labelledby="register-prosumer-title"
         >
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900">
-              Register New Prosumer
-            </h2>
-
-            <p className="mt-1 text-sm text-slate-500">
-              Enter the prosumer information below.
-            </p>
+          <div className="node-panel-heading">
+            <div>
+              <span>Registry command / New entry</span>
+              <h2 id="register-prosumer-title">Register New Prosumer</h2>
+              <p>Enter the distributed solar producer details and electrical specifications below.</p>
+            </div>
+            <Plus aria-hidden="true" />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="node-form-grid">
+            <FormField
+              label="National ID (NIC)"
+              name="nic"
+              value={form.nic}
+              onChange={handleFormChange}
+              placeholder="199812345678"
+              required
+            />
 
-            {/* NIC */}
-            <div>
-              <label
-                htmlFor="nic"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                NIC
-              </label>
+            <FormField
+              label="Prosumer Name"
+              name="name"
+              value={form.name}
+              onChange={handleFormChange}
+              placeholder="SunPower Station A"
+              required
+            />
 
-              <input
-                id="nic"
-                type="text"
-                name="nic"
-                value={form.nic}
-                onChange={handleFormChange}
-                placeholder="199812345678"
-                className="node-input"
-                required
-              />
-            </div>
+            <FormField
+              label="Solar Capacity (kW)"
+              name="solarCapacityKw"
+              type="number"
+              step="any"
+              min="0"
+              value={form.solarCapacityKw}
+              onChange={handleFormChange}
+              placeholder="25.0"
+              required
+            />
 
-            {/* Name */}
-            <div>
-              <label
-                htmlFor="name"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Name
-              </label>
+            <FormField
+              label="Battery Capacity (kWh)"
+              name="batteryCapacityKwh"
+              type="number"
+              step="any"
+              min="0"
+              value={form.batteryCapacityKwh}
+              onChange={handleFormChange}
+              placeholder="50.0"
+              required
+            />
 
-              <input
-                id="name"
-                type="text"
-                name="name"
-                value={form.name}
-                onChange={handleFormChange}
-                placeholder="John Perera"
-                className="node-input"
-                required
-              />
-            </div>
+            <FormField
+              label="Available Energy (kW)"
+              name="availableEnergyKw"
+              type="number"
+              step="any"
+              min="0"
+              value={form.availableEnergyKw}
+              onChange={handleFormChange}
+              placeholder="15.0"
+              required
+            />
 
-            {/* Solar Capacity */}
-            <div>
-              <label
-                htmlFor="solarCapacityKw"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Solar Capacity (kW)
-              </label>
+            <FormField
+              label="Tariff (Rs. / kWh)"
+              name="pricePerKwh"
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.pricePerKwh}
+              onChange={handleFormChange}
+              placeholder="45.00"
+              required
+            />
 
-              <input
-                id="solarCapacityKw"
-                type="number"
-                name="solarCapacityKw"
-                value={form.solarCapacityKw}
-                onChange={handleFormChange}
-                min="0"
-                step="any"
-                placeholder="5"
-                className="node-input"
-                required
-              />
-            </div>
+            <FormField
+              label="Installation Location"
+              name="location"
+              value={form.location}
+              onChange={handleFormChange}
+              placeholder="Kaduwela Substation Cluster"
+              required
+            />
 
-            {/* Battery Capacity */}
-            <div>
-              <label
-                htmlFor="batteryCapacityKwh"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Battery Capacity (kWh)
-              </label>
-
-              <input
-                id="batteryCapacityKwh"
-                type="number"
-                name="batteryCapacityKwh"
-                value={form.batteryCapacityKwh}
-                onChange={handleFormChange}
-                min="0"
-                step="any"
-                placeholder="10"
-                className="node-input"
-                required
-              />
-            </div>
-
-            {/* Available Energy */}
-            <div>
-              <label
-                htmlFor="availableEnergyKw"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Available Energy (kW)
-              </label>
-
-              <input
-                id="availableEnergyKw"
-                type="number"
-                name="availableEnergyKw"
-                value={form.availableEnergyKw}
-                onChange={handleFormChange}
-                min="0"
-                step="any"
-                placeholder="0"
-                className="node-input"
-                required
-              />
-            </div>
-
-            {/* Price */}
-            <div>
-              <label
-                htmlFor="pricePerKwh"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Price per kWh
-              </label>
-
-              <input
-                id="pricePerKwh"
-                type="number"
-                name="pricePerKwh"
-                value={form.pricePerKwh}
-                onChange={handleFormChange}
-                min="0"
-                step="0.01"
-                placeholder="50"
-                className="node-input"
-                required
-              />
-            </div>
-
-            {/* Location */}
-            <div>
-              <label
-                htmlFor="location"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Location
-              </label>
-
-              <input
-                id="location"
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleFormChange}
-                placeholder="Nugegoda"
-                className="node-input"
-                required
-              />
-            </div>
-
-            {/* Microgrid Node */}
-            <div>
-              <label
-                htmlFor="microgridNodeId"
-                className="mb-2 block text-sm font-semibold text-slate-700"
-              >
-                Microgrid Node ID
-              </label>
-
-              <input
-                id="microgridNodeId"
-                type="text"
-                name="microgridNodeId"
-                value={form.microgridNodeId}
-                onChange={handleFormChange}
-                placeholder="Optional"
-                className="node-input"
-              />
-            </div>
+            <FormField
+              label="Assigned Node ID"
+              name="microgridNodeId"
+              value={form.microgridNodeId}
+              onChange={handleFormChange}
+              placeholder="Optional Node Link (e.g. NODE-MALABE-01)"
+            />
           </div>
 
-          <div className="mt-7 flex justify-end">
+          <div className="node-panel-actions">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="primary-btn"
+              className="node-command is-primary"
             >
               {isSubmitting ? (
                 <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                  Registering
+                  <LoaderCircle className="is-spinning" aria-hidden="true" />
+                  Registering Prosumer...
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4" />
+                  <Plus aria-hidden="true" />
                   Register Prosumer
                 </>
               )}
@@ -687,316 +518,249 @@ export default function ProsumerManagement() {
           </div>
         </motion.form>
 
-        {/* Registered Prosumers */}
-        <section className="node-card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-xl font-bold text-slate-900">
-              Registered Prosumers
-            </h2>
+        {/* Prosumer Manifest Table */}
+        <section className="node-ledger mt-10" aria-labelledby="registered-prosumers-title">
+          <div className="node-ledger-heading flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+            <div>
+              <span>Live infrastructure manifest</span>
+              <h2 id="registered-prosumers-title">Registered Prosumers</h2>
+              <p>
+                {prosumers.length} solar prosumer{prosumers.length === 1 ? '' : 's'} registered in the central microgrid database.
+              </p>
+            </div>
 
-            <p className="mt-1 text-sm text-slate-500">
-              {prosumers.length} prosumer
-              {prosumers.length === 1 ? '' : 's'} registered
-            </p>
+            <div className="relative w-full sm:w-72">
+              <input
+                type="text"
+                placeholder="Search prosumers by name, NIC, location..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="node-input"
+                style={{ paddingLeft: '36px', height: '40px', fontSize: '12px' }}
+              />
+              <Search className="w-4 h-4 text-[#8c9288] absolute left-3 top-3 pointer-events-none" />
+            </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-[1250px] w-full text-left">
-              <thead className="bg-slate-50">
-                <tr className="text-xs font-bold text-slate-500">
-                  <th className="px-5 py-4">NIC</th>
-                  <th className="px-5 py-4">Name</th>
-                  <th className="px-5 py-4">Solar</th>
-                  <th className="px-5 py-4">Battery</th>
-                  <th className="px-5 py-4">Available Energy</th>
-                  <th className="px-5 py-4">Price / kWh</th>
-                  <th className="px-5 py-4">Location</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Actions</th>
+          <div className="node-table-frame">
+            <table className="node-table">
+              <thead>
+                <tr>
+                  <th scope="col">NIC / Identifier</th>
+                  <th scope="col">Prosumer Name</th>
+                  <th scope="col">Solar Cap.</th>
+                  <th scope="col">Battery</th>
+                  <th scope="col">Available</th>
+                  <th scope="col">Tariff</th>
+                  <th scope="col">Location</th>
+                  <th scope="col">Status</th>
+                  <th scope="col" className="text-right">Actions</th>
                 </tr>
               </thead>
+              <tbody>
+                {isLoadingList ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-12 text-[#8c9288] font-mono text-xs">
+                      Synchronizing prosumer manifest from central grid node...
+                    </td>
+                  </tr>
+                ) : filteredProsumers.length === 0 ? (
+                  <tr>
+                    <td colSpan="9" className="text-center py-12 text-[#8c9288] font-mono text-xs">
+                      {search ? 'No prosumers match your filter query.' : 'No prosumers registered yet. Use the form above to add an entry.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredProsumers.map((p, idx) => {
+                    const isActive = p.isAvailable === true;
+                    const isLoading = loadingId === p.nic;
 
-              <tbody className="divide-y divide-slate-100">
-                <AnimatePresence>
-                  {isLoadingList ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="px-5 py-16 text-center"
+                    return (
+                      <motion.tr
+                        key={p.nic || idx}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.02 }}
+                        className="prosumer-table-row"
                       >
-                        <div className="flex items-center justify-center gap-3 text-sm text-slate-500">
-                          <LoaderCircle className="h-5 w-5 animate-spin text-slate-400" />
-                          Loading prosumers
-                        </div>
-                      </td>
-                    </tr>
-                  ) : prosumers.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={9}
-                        className="px-5 py-16 text-center text-sm text-slate-500"
-                      >
-                        No prosumers have been registered.
-                      </td>
-                    </tr>
-                  ) : (
-                    prosumers.map((prosumer, index) => (
-                      <ProsumerRow
-                        key={prosumer.nic}
-                        prosumer={prosumer}
-                        index={index}
-                        loadingId={loadingId}
-                        onEdit={handleEdit}
-                        onDeactivate={handleDeactivate}
-                        onReactivate={handleReactivate}
-                      />
-                    ))
-                  )}
-                </AnimatePresence>
+                        <td className="font-mono text-xs text-[#FFD000]">{p.nic}</td>
+                        <td className="font-medium text-white">{p.name}</td>
+                        <td>{p.solarCapacityKw} kW</td>
+                        <td>{p.batteryCapacityKwh} kWh</td>
+                        <td className="text-emerald-400 font-mono">{p.availableEnergyKw} kW</td>
+                        <td className="font-mono">Rs. {p.pricePerKwh}</td>
+                        <td className="text-[#b1b5ac] text-xs">{p.location || '—'}</td>
+                        <td>
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                            isActive
+                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              : 'bg-red-500/15 text-red-400 border border-red-500/30'
+                          }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${isActive ? 'bg-emerald-400' : 'bg-red-400'}`} />
+                            {isActive ? 'Active' : 'Inactive'}
+                          </span>
+                        </td>
+                        <td className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => startEdit(p)}
+                              disabled={isLoading}
+                              className="px-3 py-1 text-xs border border-white/10 hover:border-[#FFD000] text-slate-200 hover:text-[#FFD000] rounded transition-colors"
+                            >
+                              <Edit3 className="w-3.5 h-3.5 inline mr-1" />
+                              Edit
+                            </button>
+
+                            {isActive ? (
+                              <button
+                                type="button"
+                                onClick={() => handleDeactivate(p.nic)}
+                                disabled={isLoading}
+                                className="px-3 py-1 text-xs border border-red-500/30 hover:bg-red-500/10 text-red-400 rounded transition-colors"
+                              >
+                                <Power className="w-3.5 h-3.5 inline mr-1" />
+                                Pause
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleReactivate(p.nic)}
+                                disabled={isLoading}
+                                className="px-3 py-1 text-xs border border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400 rounded transition-colors"
+                              >
+                                <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
+                                Resume
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
         </section>
 
-        {/* Edit Prosumer Modal */}
+        {/* Edit Modal */}
         <AnimatePresence>
           {editingProsumer && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
+            <div
+              className="dispatch-modal-overlay"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) closeEditModal();
+              }}
             >
               <motion.div
-                initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.96, y: 10 }}
-                className="w-full max-w-4xl rounded-2xl bg-white p-6 shadow-2xl sm:p-8"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="node-panel max-w-2xl w-full mx-4 relative"
+                style={{ backgroundColor: '#0f1110', border: '1px solid var(--ops-line-strong)' }}
               >
-                <div className="mb-6 flex items-start justify-between">
+                <div className="flex items-center justify-between pb-4 border-b border-[var(--ops-line)] mb-6">
                   <div>
-                    <h2 className="text-xl font-bold text-slate-900">
-                      Edit Prosumer
-                    </h2>
-
-                    <p className="mt-1 text-sm text-slate-500">
-                      Update the prosumer profile information.
-                    </p>
+                    <span className="text-[10px] font-mono uppercase text-[var(--ops-solar)]">Edit Hardware Profile</span>
+                    <h3 className="text-xl font-normal text-white">Prosumer #{editingProsumer.nic}</h3>
                   </div>
-
                   <button
                     type="button"
-                    onClick={() => setEditingProsumer(null)}
-                    disabled={isUpdating}
-                    aria-label="Close edit modal"
-                    className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+                    onClick={closeEditModal}
+                    className="node-notice-close"
                   >
-                    <X className="h-5 w-5" />
+                    <X className="w-5 h-5 text-slate-400 hover:text-white" />
                   </button>
                 </div>
 
+                {editError && (
+                  <div className="node-notice is-error mb-4">
+                    <span>{editError}</span>
+                  </div>
+                )}
+
                 <form onSubmit={handleUpdate}>
-                  <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-
-                    {/* NIC */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        NIC
-                      </label>
-
-                      <input
-                        type="text"
-                        value={editingProsumer.nic}
-                        disabled
-                        className="node-input bg-slate-100"
-                      />
-
-                      <p className="mt-1 text-xs text-slate-400">
-                        NIC cannot be changed.
-                      </p>
-                    </div>
-
-                    {/* Name */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Name
-                      </label>
-
-                      <input
-                        type="text"
-                        value={editingProsumer.name}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            name: event.target.value,
-                          }))
-                        }
-                        className="node-input"
-                        required
-                      />
-                    </div>
-
-                    {/* Solar */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Solar Capacity (kW)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={editingProsumer.solarCapacityKw}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            solarCapacityKw: event.target.value,
-                          }))
-                        }
-                        className="node-input"
-                        required
-                      />
-                    </div>
-
-                    {/* Battery */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Battery Capacity (kWh)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={editingProsumer.batteryCapacityKwh}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            batteryCapacityKwh: event.target.value,
-                          }))
-                        }
-                        className="node-input"
-                        required
-                      />
-                    </div>
-
-                    {/* Available Energy */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Available Energy (kW)
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="any"
-                        value={editingProsumer.availableEnergyKw}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            availableEnergyKw: event.target.value,
-                          }))
-                        }
-                        className="node-input"
-                        required
-                      />
-                    </div>
-
-                    {/* Price */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Price per kWh
-                      </label>
-
-                      <input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={editingProsumer.pricePerKwh}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            pricePerKwh: event.target.value,
-                          }))
-                        }
-                        className="node-input"
-                        required
-                      />
-                    </div>
-
-                    {/* Location */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Location
-                      </label>
-
-                      <input
-                        type="text"
-                        value={editingProsumer.location}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            location: event.target.value,
-                          }))
-                        }
-                        className="node-input"
-                        required
-                      />
-                    </div>
-
-                    {/* Microgrid Node */}
-                    <div>
-                      <label className="mb-2 block text-sm font-semibold text-slate-700">
-                        Microgrid Node ID
-                      </label>
-
-                      <input
-                        type="text"
-                        value={editingProsumer.microgridNodeId}
-                        onChange={(event) =>
-                          setEditingProsumer((previous) => ({
-                            ...previous,
-                            microgridNodeId: event.target.value,
-                          }))
-                        }
-                        placeholder="Optional"
-                        className="node-input"
-                      />
-                    </div>
+                  <div className="node-form-grid mb-6">
+                    <FormField
+                      label="Prosumer Name"
+                      name="name"
+                      value={editingProsumer.name}
+                      onChange={handleEditChange}
+                      required
+                    />
+                    <FormField
+                      label="Solar Capacity (kW)"
+                      name="solarCapacityKw"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={editingProsumer.solarCapacityKw}
+                      onChange={handleEditChange}
+                      required
+                    />
+                    <FormField
+                      label="Battery Capacity (kWh)"
+                      name="batteryCapacityKwh"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={editingProsumer.batteryCapacityKwh}
+                      onChange={handleEditChange}
+                      required
+                    />
+                    <FormField
+                      label="Available Energy (kW)"
+                      name="availableEnergyKw"
+                      type="number"
+                      step="any"
+                      min="0"
+                      value={editingProsumer.availableEnergyKw}
+                      onChange={handleEditChange}
+                      required
+                    />
+                    <FormField
+                      label="Tariff (Rs. / kWh)"
+                      name="pricePerKwh"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={editingProsumer.pricePerKwh}
+                      onChange={handleEditChange}
+                      required
+                    />
+                    <FormField
+                      label="Location"
+                      name="location"
+                      value={editingProsumer.location}
+                      onChange={handleEditChange}
+                      required
+                    />
                   </div>
 
-                  <div className="mt-7 flex justify-end gap-3">
+                  <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--ops-line)]">
                     <button
                       type="button"
-                      onClick={() => setEditingProsumer(null)}
-                      disabled={isUpdating}
-                      className="secondary-btn"
+                      onClick={closeEditModal}
+                      className="px-4 py-2 text-xs border border-white/10 hover:border-white/20 text-slate-300 rounded"
                     >
                       Cancel
                     </button>
-
                     <button
                       type="submit"
                       disabled={isUpdating}
-                      className="primary-btn"
+                      className="sync-control"
+                      style={{ minHeight: '38px', padding: '0 20px', fontSize: '12px' }}
                     >
-                      {isUpdating ? (
-                        <>
-                          <LoaderCircle className="h-4 w-4 animate-spin" />
-                          Saving
-                        </>
-                      ) : (
-                        'Save Changes'
-                      )}
+                      {isUpdating ? 'Saving Specs...' : 'Save Profile Specs'}
                     </button>
                   </div>
                 </form>
               </motion.div>
-            </motion.div>
+            </div>
           )}
         </AnimatePresence>
-
-      </div>
-    </main>
+      </main>
+    </div>
   );
 }

@@ -4,13 +4,11 @@ import { MapPin, Pencil, PowerOff, Power, LoaderCircle } from 'lucide-react';
 const statusStyles = {
   active: {
     label: 'Active',
-    badge: 'border-emerald-200 bg-emerald-50 text-emerald-700',
-    dot: 'bg-emerald-500',
+    className: 'is-active',
   },
   inactive: {
     label: 'Inactive',
-    badge: 'border-slate-200 bg-slate-100 text-slate-600',
-    dot: 'bg-slate-400',
+    className: 'is-inactive',
   },
 };
 
@@ -39,8 +37,8 @@ function StatusBadge({ status }) {
     statusStyles[normalizedStatus] ?? statusStyles.inactive;
 
   return (
-    <span className={`status-badge ${config.badge}`}>
-      <span className={`h-2 w-2 rounded-full ${config.dot}`} />
+    <span className={`node-status ${config.className}`}>
+      <i aria-hidden="true" />
       {config.label}
     </span>
   );
@@ -72,51 +70,51 @@ export default function NodeRow({
         },
       }}
       exit={{ opacity: 0, x: -20 }}
-      className="bg-white transition-colors hover:bg-slate-50"
+      className={`node-ledger-row ${isActive ? 'is-active' : 'is-inactive'}`}
     >
-      <td className="whitespace-nowrap px-5 py-5">
-        <span className="font-mono text-xs font-semibold tracking-wider text-slate-500">
+      <td className="node-reference-cell">
+        <code>
           #{String(rowId || '').slice(0, 8).toUpperCase()}
-        </span>
+        </code>
       </td>
 
-      <td className="px-5 py-5">
-        <span className="block max-w-[180px] truncate text-sm font-bold text-slate-800">
+      <td className="node-name-cell">
+        <strong>
           {node.name || '—'}
-        </span>
+        </strong>
       </td>
 
-      <td className="whitespace-nowrap px-5 py-5">
-        <span className="inline-flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700">
-          <MapPin className="h-3.5 w-3.5" />
+      <td className="node-location-cell">
+        <span className="node-location">
+          <MapPin aria-hidden="true" />
           {formatCoordinate(node.latitude)},{' '}
           {formatCoordinate(node.longitude)}
         </span>
       </td>
 
-      <td className="whitespace-nowrap px-5 py-5">
-        <span className="text-sm font-bold text-amber-600">
+      <td className="node-capacity-cell">
+        <span className="node-capacity">
           {formatCapacity(node.capacityKWh)}
         </span>
       </td>
 
-      <td className="whitespace-nowrap px-5 py-5">
-        <span className="text-sm font-semibold text-slate-600">
+      <td className="node-slots-cell">
+        <span className="node-slot-count">
           {node.batterySlots ?? '—'} slots
         </span>
       </td>
 
-      <td className="px-5 py-5">
-        <span className="block max-w-[180px] text-sm text-slate-600">
+      <td className="node-schedule-cell">
+        <span className="node-schedule">
           {node.schedule || 'Not specified'}
         </span>
       </td>
 
-      <td className="whitespace-nowrap px-5 py-5">
+      <td className="node-status-cell">
         <StatusBadge status={node.status} />
       </td>
 
-      <td className="whitespace-nowrap px-5 py-5">
+      <td className="node-actions-cell">
         <AnimatePresence mode="wait">
           {isLoading ? (
             <motion.div
@@ -124,9 +122,9 @@ export default function NodeRow({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="flex items-center gap-2 text-xs font-semibold text-slate-500"
+              className="node-row-progress"
             >
-              <LoaderCircle className="h-4 w-4 animate-spin text-slate-400" />
+              <LoaderCircle className="is-spinning" aria-hidden="true" />
               Processing
             </motion.div>
           ) : (
@@ -134,14 +132,14 @@ export default function NodeRow({
               key="actions"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center gap-2"
+              className="node-row-actions"
             >
               <button
                 type="button"
                 onClick={() => onEdit(node)}
-                className="edit-btn"
+                className="node-row-action is-edit"
               >
-                <Pencil className="h-4 w-4" />
+                <Pencil aria-hidden="true" />
                 Edit
               </button>
 
@@ -149,18 +147,18 @@ export default function NodeRow({
                 <button
                   type="button"
                   onClick={() => onDeactivate(rowId)}
-                  className="deactivate-btn"
+                  className="node-row-action is-deactivate"
                 >
-                  <PowerOff className="h-4 w-4" />
+                  <PowerOff aria-hidden="true" />
                   Deactivate
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => onReactivate(rowId)}
-                  className="reactivate-btn"
+                  className="node-row-action is-reactivate"
                 >
-                  <Power className="h-4 w-4" />
+                  <Power aria-hidden="true" />
                   Reactivate
                 </button>
               )}

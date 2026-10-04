@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { RefreshCw, Plus, LoaderCircle, X, Network, Zap, BatteryCharging, ArrowLeft } from 'lucide-react';
+import { RefreshCw, Plus, LoaderCircle, X, Network, Zap, BatteryCharging } from 'lucide-react';
+import NavigationHeader from '../components/NavigationHeader';
 import NodeRow from '../components/NodeRow';
 import {
   getNodes,
@@ -99,11 +99,8 @@ function FormField({
   className = '',
 }) {
   return (
-    <div className={className}>
-      <label
-        htmlFor={name}
-        className="mb-2 block text-sm font-semibold text-slate-700"
-      >
+    <div className={`node-field ${className}`.trim()}>
+      <label htmlFor={name} className="node-field-label">
         {label}
       </label>
 
@@ -118,7 +115,7 @@ function FormField({
         min={min}
         max={max}
         required={required}
-        className="node-input"
+        className="node-field-input"
       />
     </div>
   );
@@ -324,73 +321,73 @@ export default function NodeManagement() {
   const inactiveCount = nodes.length - activeCount;
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <div className="mx-auto max-w-7xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-        <section className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <Link
-              to="/reservations"
-              className="mb-4 inline-flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Back to Dashboard
-            </Link>
+    <div className="operations-shell">
+      <NavigationHeader subtitle="Node registry" />
 
-            <span className="mb-3 inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700">
-              <Network className="h-3.5 w-3.5" />
-              Grid Operator
-            </span>
+      <main className="operations-workspace node-workspace">
+        <section className="node-hero" aria-labelledby="node-management-title">
+          <div className="operations-heading node-heading">
+            <div className="section-coordinate">
+              <span>02</span>
+              <p>Infrastructure / node registry</p>
+            </div>
 
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Microgrid Node Management
+            <h1 id="node-management-title">
+              Solar node <em>registry.</em>
             </h1>
 
-            <p className="mt-2 text-sm text-slate-500">
-              Register, update and control solar microgrid nodes.
+            <p className="operations-intro">
+              Register, update and control the solar hubs connected to the live microgrid.
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={() => fetchNodes()}
-            disabled={isLoadingList}
-            className="secondary-btn"
-          >
-            <RefreshCw className={`h-4 w-4 ${isLoadingList ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+          <aside className="node-hero-console" aria-label="Node registry control">
+            <span className="node-console-index">Solar Hub Control</span>
+            <div className="node-console-status">
+              <i aria-hidden="true" />
+              Registry synchronized
+            </div>
+            <p>Refresh the registry to pull the latest capacity, battery and operating status.</p>
+
+            <button
+              type="button"
+              onClick={() => fetchNodes()}
+              disabled={isLoadingList}
+              className="sync-control node-refresh-control"
+            >
+              <RefreshCw className={isLoadingList ? 'is-spinning' : ''} />
+              {isLoadingList ? 'Synchronizing' : 'Synchronize nodes'}
+            </button>
+          </aside>
         </section>
 
-        <section className="grid gap-4 sm:grid-cols-3">
-          <div className="summary-card">
-            <div className="flex items-center gap-2 mb-1">
-              <Network className="h-4 w-4 text-slate-500" />
-              <span className="summary-label">Total Nodes</span>
+        <section className="node-metrics" aria-label="Node registry telemetry">
+          <article className="node-metric">
+            <div className="node-metric-head">
+              <span>01 / Registered</span>
+              <Network aria-hidden="true" />
             </div>
-            <strong className="summary-number text-slate-900">
-              {nodes.length}
-            </strong>
-          </div>
+            <strong>{nodes.length}</strong>
+            <p>Total solar nodes</p>
+          </article>
 
-          <div className="summary-card">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className="h-4 w-4 text-emerald-600" />
-              <span className="summary-label">Active Nodes</span>
+          <article className="node-metric is-positive">
+            <div className="node-metric-head">
+              <span>02 / Live</span>
+              <Zap aria-hidden="true" />
             </div>
-            <strong className="summary-number text-emerald-600">
-              {activeCount}
-            </strong>
-          </div>
+            <strong>{activeCount}</strong>
+            <p>Active dispatch nodes</p>
+          </article>
 
-          <div className="summary-card">
-            <div className="flex items-center gap-2 mb-1">
-              <BatteryCharging className="h-4 w-4 text-slate-500" />
-              <span className="summary-label">Inactive Nodes</span>
+          <article className="node-metric is-muted">
+            <div className="node-metric-head">
+              <span>03 / Offline</span>
+              <BatteryCharging aria-hidden="true" />
             </div>
-            <strong className="summary-number text-slate-500">
-              {inactiveCount}
-            </strong>
-          </div>
+            <strong>{inactiveCount}</strong>
+            <p>Inactive nodes</p>
+          </article>
         </section>
 
         <AnimatePresence mode="wait">
@@ -400,7 +397,8 @@ export default function NodeManagement() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="alert-error"
+              className="node-notice is-error"
+              role="alert"
             >
               <span>{errorMsg}</span>
 
@@ -408,9 +406,9 @@ export default function NodeManagement() {
                 type="button"
                 onClick={() => setErrorMsg('')}
                 aria-label="Close error message"
-                className="flex items-center justify-center"
+                className="node-notice-close"
               >
-                <X className="w-3.5 h-3.5" />
+                <X aria-hidden="true" />
               </button>
             </motion.div>
           )}
@@ -421,7 +419,8 @@ export default function NodeManagement() {
               initial={{ opacity: 0, y: -8 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }}
-              className="alert-success"
+              className="node-notice is-success"
+              role="status"
             >
               <span>{successMsg}</span>
 
@@ -429,9 +428,9 @@ export default function NodeManagement() {
                 type="button"
                 onClick={() => setSuccessMsg('')}
                 aria-label="Close success message"
-                className="flex items-center justify-center"
+                className="node-notice-close"
               >
-                <X className="w-3.5 h-3.5" />
+                <X aria-hidden="true" />
               </button>
             </motion.div>
           )}
@@ -441,19 +440,22 @@ export default function NodeManagement() {
           onSubmit={handleSubmit}
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          className="node-card p-6 sm:p-8"
+          className="node-panel node-registration-panel"
+          aria-labelledby="register-node-title"
         >
-          <div className="mb-6">
-            <h2 className="text-xl font-bold text-slate-900">
+          <div className="node-panel-heading">
+            <div>
+              <span>Registry command / New entry</span>
+              <h2 id="register-node-title">
               Register New Node
-            </h2>
+              </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              Enter the solar hub information below.
-            </p>
+              <p>Enter the solar hub information below.</p>
+            </div>
+            <Plus aria-hidden="true" />
           </div>
 
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <div className="node-form-grid">
             <FormField
               label="Node Name"
               name="name"
@@ -522,20 +524,20 @@ export default function NodeManagement() {
             />
           </div>
 
-          <div className="mt-7 flex justify-end">
+          <div className="node-panel-actions">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="primary-btn"
+              className="node-command is-primary"
             >
               {isSubmitting ? (
                 <>
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  <LoaderCircle className="is-spinning" aria-hidden="true" />
                   Registering
                 </>
               ) : (
                 <>
-                  <Plus className="h-4 w-4" />
+                  <Plus aria-hidden="true" />
                   Register Node
                 </>
               )}
@@ -543,54 +545,55 @@ export default function NodeManagement() {
           </div>
         </motion.form>
 
-        <section className="node-card overflow-hidden">
-          <div className="border-b border-slate-200 px-6 py-5">
-            <h2 className="text-xl font-bold text-slate-900">
+        <section className="node-ledger" aria-labelledby="registered-nodes-title">
+          <div className="node-ledger-heading">
+            <div>
+              <span>Live infrastructure manifest</span>
+              <h2 id="registered-nodes-title">
               Registered Nodes
-            </h2>
+              </h2>
 
-            <p className="mt-1 text-sm text-slate-500">
-              {nodes.length} microgrid node
-              {nodes.length === 1 ? '' : 's'} registered
-            </p>
+              <p>
+                {nodes.length} microgrid node
+                {nodes.length === 1 ? '' : 's'} registered
+              </p>
+            </div>
+            <span className="node-ledger-count">{String(nodes.length).padStart(2, '0')} units</span>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-[1100px] w-full text-left">
-              <thead className="bg-slate-50">
-                <tr className="text-xs font-bold text-slate-500">
-                  <th className="px-5 py-4">Node ID</th>
-                  <th className="px-5 py-4">Name</th>
-                  <th className="px-5 py-4">Location</th>
-                  <th className="px-5 py-4">Capacity</th>
-                  <th className="px-5 py-4">Slots</th>
-                  <th className="px-5 py-4">Schedule</th>
-                  <th className="px-5 py-4">Status</th>
-                  <th className="px-5 py-4">Actions</th>
+          <div className="node-table-wrap">
+            <table className="node-ledger-table">
+              <thead>
+                <tr>
+                  <th>Node ID</th>
+                  <th>Name</th>
+                  <th>Location</th>
+                  <th>Capacity</th>
+                  <th>Slots</th>
+                  <th>Schedule</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
 
-              <tbody className="divide-y divide-slate-100">
+              <tbody>
                 <AnimatePresence>
                   {isLoadingList ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="px-5 py-16 text-center"
-                      >
-                        <div className="flex items-center justify-center gap-3 text-sm text-slate-500">
-                          <LoaderCircle className="h-5 w-5 animate-spin text-slate-400" />
+                    <tr className="node-table-state-row">
+                      <td colSpan={8}>
+                        <div className="node-table-state" role="status">
+                          <LoaderCircle className="is-spinning" aria-hidden="true" />
                           Loading nodes
                         </div>
                       </td>
                     </tr>
                   ) : nodes.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={8}
-                        className="px-5 py-16 text-center text-sm text-slate-500"
-                      >
-                        No microgrid nodes have been registered.
+                    <tr className="node-table-state-row">
+                      <td colSpan={8}>
+                        <div className="node-table-state is-empty">
+                          <Network aria-hidden="true" />
+                          <span>No microgrid nodes have been registered.</span>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -611,12 +614,12 @@ export default function NodeManagement() {
             </table>
           </div>
         </section>
-      </div>
+      </main>
 
       <AnimatePresence>
         {editingNode && (
           <motion.div
-            className="modal-overlay"
+            className="node-modal-overlay"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -627,40 +630,42 @@ export default function NodeManagement() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 20 }}
               transition={{ duration: 0.2 }}
-              className="modal-card"
+              className="node-modal"
               onMouseDown={(event) => event.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="edit-node-title"
             >
-              <div className="flex items-start justify-between border-b border-slate-200 p-6">
+              <div className="node-modal-head">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-900">
+                  <span>Registry command / Edit entry</span>
+                  <h2 id="edit-node-title">
                     Edit Microgrid Node
                   </h2>
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Update the selected node information.
-                  </p>
+                  <p>Update the selected node information.</p>
                 </div>
 
                 <button
                   type="button"
                   onClick={closeEditModal}
                   disabled={isUpdating}
-                  className="modal-close"
+                  className="node-modal-close"
                   aria-label="Close edit modal"
                 >
-                  <X className="w-4 h-4" />
+                  <X aria-hidden="true" />
                 </button>
               </div>
 
-              <form onSubmit={handleUpdate} className="p-6">
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <form onSubmit={handleUpdate} className="node-modal-form">
+                <div className="node-modal-grid">
                   <FormField
                     label="Node Name"
                     name="name"
                     value={editForm.name}
                     onChange={handleEditChange}
                     required
-                    className="sm:col-span-2"
+                    className="node-field-wide"
                   />
 
                   <FormField
@@ -715,22 +720,22 @@ export default function NodeManagement() {
                     value={editForm.schedule}
                     onChange={handleEditChange}
                     placeholder="08:00 AM - 06:00 PM"
-                    className="sm:col-span-2"
+                    className="node-field-wide"
                   />
                 </div>
 
                 {editError && (
-                  <div className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                  <div className="node-notice is-error node-modal-error" role="alert">
                     {editError}
                   </div>
                 )}
 
-                <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                <div className="node-modal-actions">
                   <button
                     type="button"
                     onClick={closeEditModal}
                     disabled={isUpdating}
-                    className="secondary-btn"
+                    className="node-command is-secondary"
                   >
                     Cancel
                   </button>
@@ -738,11 +743,11 @@ export default function NodeManagement() {
                   <button
                     type="submit"
                     disabled={isUpdating}
-                    className="primary-btn"
+                    className="node-command is-primary"
                   >
                     {isUpdating ? (
                       <>
-                        <LoaderCircle className="h-4 w-4 animate-spin" />
+                        <LoaderCircle className="is-spinning" aria-hidden="true" />
                         Saving
                       </>
                     ) : (
@@ -755,6 +760,6 @@ export default function NodeManagement() {
           </motion.div>
         )}
       </AnimatePresence>
-    </main>
+    </div>
   );
 }
