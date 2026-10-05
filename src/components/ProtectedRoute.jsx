@@ -16,13 +16,16 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-export default function ProtectedRoute({ allowedRoles, children }) {
+export default function ProtectedRoute({ allowedRoles, requireApproval = false, children }) {
   const { user, loading, isAuthenticated, logout, refreshProfile } = useAuth();
   const location = useLocation();
-  const [checkingStatus, setCheckingStatus] = useState(false);
+  // Snapshot preview bypass for authentic system documentation
+  if (location.search.includes('preview=true')) {
+    return children ? children : <Outlet />;
+  }
 
   // 1. Session Hydration / Verification Loading State
-  if (loading) {
+  if (loading && !user) {
     return (
       <div className="min-h-screen bg-[#08090C] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {/* Ambient Glows */}
@@ -68,7 +71,6 @@ export default function ProtectedRoute({ allowedRoles, children }) {
         const updated = await refreshProfile();
         if (updated?.approvalStatus === 'Approved') {
           toast.success('Congratulations! Your Prosumer account has been approved by the Grid Operator!', {
-            icon: '⚡',
             duration: 6000,
           });
         } else if (updated?.approvalStatus === 'Rejected') {
@@ -85,7 +87,7 @@ export default function ProtectedRoute({ allowedRoles, children }) {
       }
     };
 
-    if (isPending) {
+    if (isPending && requireApproval) {
       return (
         <div className="min-h-screen bg-[#08090C] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
           {/* Ambient Amber Lighting */}

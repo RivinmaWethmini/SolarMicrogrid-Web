@@ -3,30 +3,27 @@ import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
-  Mail,
+  SunMedium,
   User,
   Lock,
   Eye,
   EyeOff,
-  Zap,
   ArrowRight,
   RefreshCw,
-  KeyRound,
-  ShieldCheck,
+  Mail,
   Edit2,
-  Sparkles,
-  Inbox,
+  CheckCircle2,
 } from 'lucide-react';
 import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import solarGridVideo from '../assets/images/Solar Grid.mp4';
+import solisFacilityImg from '../assets/images/solis-facility.jpg';
 
 export default function Login() {
   const { loginWithAuthResponse, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // If already authenticated, redirect to reservations or target page
+  // If already authenticated, redirect to reservations
   useEffect(() => {
     if (isAuthenticated) {
       const destination = location.state?.from?.pathname || '/reservations';
@@ -34,7 +31,7 @@ export default function Login() {
     }
   }, [isAuthenticated, navigate, location]);
 
-  // Auth Mode: 'password' (Email or Username + Password) | 'otp' (One-Time Passcode to Registered Email)
+  // Auth Mode: 'password' | 'otp'
   const [authMode, setAuthMode] = useState('password');
 
   // Password Login State
@@ -47,15 +44,14 @@ export default function Login() {
   const [otpIdentifier, setOtpIdentifier] = useState('');
   const [maskedEmail, setMaskedEmail] = useState('');
   const [sendingOtp, setSendingOtp] = useState(false);
-  const [otpStep, setOtpStep] = useState(1); // 1 = Identifier, 2 = 6-Digit OTP Code
+  const [otpStep, setOtpStep] = useState(1); // 1 = Identifier, 2 = 6-Digit Code
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [verifyingOtp, setVerifyingOtp] = useState(false);
   const [cooldown, setCooldown] = useState(0);
-  const [attemptsRemaining, setAttemptsRemaining] = useState(null);
 
   const otpInputsRef = useRef([]);
 
-  // Cooldown timer effect
+  // Cooldown countdown timer
   useEffect(() => {
     if (cooldown <= 0) return;
     const interval = setInterval(() => {
@@ -85,26 +81,34 @@ export default function Login() {
       loginWithAuthResponse(authResponse);
 
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || authResponse.user?.email;
-      toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
+      toast.success(`Welcome back, ${userGreeting}!`);
 
       const userRole = authResponse.user?.role?.toLowerCase();
+      const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
       let destination = location.state?.from?.pathname;
-      if (destination && destination.startsWith('/admin') && userRole !== 'admin') {
+      if (destination && destination.startsWith('/admin') && !isBackoffice) {
         destination = '/reservations';
       }
       if (!destination) {
-        destination = userRole === 'admin' ? '/admin/approvals' : '/reservations';
+        destination = isBackoffice ? '/backoffice' : '/reservations';
       }
       navigate(destination, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Invalid email/username or password.';
+      let msg = err.response?.data?.message;
+      if (!msg) {
+        if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
+          msg = 'Unable to connect to Solar API server (port 5298). Please verify the backend is running.';
+        } else {
+          msg = 'Invalid email/username or password.';
+        }
+      }
       toast.error(msg);
     } finally {
       setLoggingIn(false);
     }
   };
 
-  // --- OTP SEND (LOOKS UP REGISTERED USER & AUTOMATICALLY FETCHES EMAIL) ---
+  // --- OTP SEND ---
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
 
@@ -117,64 +121,60 @@ export default function Login() {
     try {
       setSendingOtp(true);
       const res = await authApi.sendLoginOtp(trimmed);
-      setMaskedEmail(res.maskedEmail || 'your registered email');
-      toast.success(res.message || `Passcode dispatched to ${res.maskedEmail}!`);
 
+      setMaskedEmail(res.maskedEmail || trimmed);
       setOtpStep(2);
       setCooldown(60);
-      setAttemptsRemaining(5);
+      toast.success(`Verification code sent to ${res.maskedEmail || 'your email'}`, { icon: '📧' });
 
       setTimeout(() => {
         otpInputsRef.current[0]?.focus();
-      }, 250);
+      }, 150);
     } catch (err) {
-      const msg = err.response?.data?.message || 'No registered account found with that email or username.';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' || !err.response ? 'Cannot connect to backend server (port 5298).' : 'Failed to send verification code. Please check your credentials.');
       toast.error(msg);
     } finally {
       setSendingOtp(false);
     }
   };
 
-  // --- OTP DIGIT CHANGES ---
+  // --- OTP DIGIT HANDLING ---
   const handleOtpChange = (index, value) => {
-    if (value && !/^\d$/.test(value)) return;
-
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    if (value && index < 5) {
-      otpInputsRef.current[index + 1]?.focus();
+    if (value.length > 1) {
+      const digits = value.replace(/\D/g, '').slice(0, 6).split('');
+      const newOtp = [...otp];
+      digits.forEach((d, i) => {
+        if (i < 6) newOtp[i] = d;
+      });
+      setOtp(newOtp);
+      const nextIndex = Math.min(digits.length, 5);
+      otpInputsRef.current[nextIndex]?.focus();
+      return;
     }
 
-    if (value && index === 5 && newOtp.every((d) => d !== '')) {
-      handleVerifyOtp(newOtp.join(''));
+    const cleanChar = value.replace(/\D/g, '');
+    const newOtp = [...otp];
+    newOtp[index] = cleanChar;
+    setOtp(newOtp);
+
+    if (cleanChar && index < 5) {
+      otpInputsRef.current[index + 1]?.focus();
     }
   };
 
-  const handleKeyDown = (index, e) => {
+  const handleOtpKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       otpInputsRef.current[index - 1]?.focus();
     }
   };
 
-  const handlePaste = (e) => {
+  // --- OTP VERIFY SUBMIT ---
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
-    const pastedData = e.clipboardData.getData('text').trim();
-    if (/^\d{6}$/.test(pastedData)) {
-      const digits = pastedData.split('');
-      setOtp(digits);
-      otpInputsRef.current[5]?.focus();
-      handleVerifyOtp(pastedData);
-    } else {
-      toast.error('Pasted content must be exactly 6 digits.');
-    }
-  };
 
-  const handleVerifyOtp = async (codeToVerify) => {
-    const finalOtp = typeof codeToVerify === 'string' ? codeToVerify : otp.join('');
+    const finalOtp = otp.join('');
     if (finalOtp.length !== 6) {
-      toast.error('Please enter all 6 digits of your passcode.');
+      toast.error('Please enter the full 6-digit code.');
       return;
     }
 
@@ -184,22 +184,21 @@ export default function Login() {
       loginWithAuthResponse(authResponse);
 
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || 'Member';
-      toast.success(`Welcome back, ${userGreeting}!`, { icon: '⚡' });
+      toast.success(`Welcome back, ${userGreeting}!`);
 
       const userRole = authResponse.user?.role?.toLowerCase();
+      const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
       let destination = location.state?.from?.pathname;
-      if (destination && destination.startsWith('/admin') && userRole !== 'admin') {
+      if (destination && destination.startsWith('/admin') && !isBackoffice) {
         destination = '/reservations';
       }
       if (!destination) {
-        destination = userRole === 'admin' ? '/admin/approvals' : '/reservations';
+        destination = isBackoffice ? '/backoffice' : '/reservations';
       }
       navigate(destination, { replace: true });
     } catch (err) {
-      const msg = err.response?.data?.message || 'Verification failed. Please check the code.';
+      const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' || !err.response ? 'Cannot connect to backend server (port 5298).' : 'Verification failed. Please check the code.');
       toast.error(msg);
-
-      setAttemptsRemaining((prev) => (prev !== null && prev > 1 ? prev - 1 : 0));
       setOtp(['', '', '', '', '', '']);
       otpInputsRef.current[0]?.focus();
     } finally {
@@ -208,356 +207,295 @@ export default function Login() {
   };
 
   return (
-    <div className="dashboard-container min-h-screen flex flex-col justify-center items-center p-4 sm:p-6 relative overflow-hidden font-sans">
-      {/* Dynamic Ambient Background Accents */}
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-[#FFD000]/10 rounded-full blur-[140px] pointer-events-none" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-[#FFD000]/5 rounded-full blur-[140px] pointer-events-none" />
+    <div className="operations-shell min-h-screen flex flex-col justify-between">
+      {/* Top Minimal Brand Bar */}
+      <header className="operations-topbar !grid-template-columns-none flex items-center justify-between px-6 sm:px-12 py-4">
+        <Link to="/" className="inline-flex items-center gap-3 text-[#f0f0e8] no-underline">
+          <span className="w-8 h-8 rounded-lg bg-[#111410] border border-[#2a2f27] flex items-center justify-center p-1">
+            <img src="/solar-logo.png" alt="SolarRays Logo" className="w-5 h-5 object-contain" />
+          </span>
+          <span className="font-semibold text-sm">SolarRays microgrid</span>
+        </Link>
 
-      {/* Main Container Card */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="glass-card max-w-lg w-full p-8 sm:p-10 relative z-10 border border-white/10 shadow-2xl"
-      >
-        {/* Header with Video Pill & Branding */}
-        <div className="flex items-center gap-4 mb-6">
-          <div className="w-14 h-14 rounded-2xl overflow-hidden border-2 border-[#FFD000]/60 shadow-xl shadow-black/80 relative flex-shrink-0">
-            <video
-              src={solarGridVideo}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className="w-full h-full object-cover"
+        <div className="flex items-center gap-4 text-xs">
+          <Link to="/" className="text-[#92988d] hover:text-[#f0f0e8] transition-colors no-underline">
+            Overview
+          </Link>
+          <Link
+            to="/register"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-semibold text-[#f0f0e8] bg-[#151914] hover:bg-[#1f241d] border border-[#2a2f27] transition-all no-underline"
+          >
+            Create account
+          </Link>
+        </div>
+      </header>
+
+      {/* Main Split-Screen Architecture */}
+      <main className="flex-1 grid lg:grid-cols-12 min-h-[calc(100vh-74px)]">
+        {/* Left Column: Clean Full-Bleed Solar Photography */}
+        <section className="lg:col-span-7 relative overflow-hidden flex flex-col justify-between p-8 sm:p-14 lg:p-16 border-b lg:border-b-0 lg:border-r border-[#2a2f27]">
+          {/* High-Resolution Background */}
+          <div className="absolute inset-0 z-0">
+            <img
+              src={solisFacilityImg}
+              alt="Solis Solar Microgrid Facility"
+              className="w-full h-full object-cover object-center"
             />
+            {/* Minimal Soft Dark Scrim */}
+            <div className="absolute inset-0 bg-gradient-to-t from-[#0b0d0b] via-[#0b0d0b]/60 to-[#0b0d0b]/40" />
+            <div className="absolute inset-0 bg-gradient-to-r from-[#0b0d0b]/80 via-transparent to-[#0b0d0b]/80" />
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#FFD000] px-2.5 py-0.5 rounded-full bg-[#FFD000]/15 border border-[#FFD000]/30">
-                Secure Access
-              </span>
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                API v1.0
-              </span>
-            </div>
-            <h1 className="text-2xl font-black text-white tracking-tight mt-1">
-              Solar Microgrid
+
+          {/* Top Indicator */}
+          <div className="relative z-10 mb-3">
+            <span className="text-sm sm:text-base font-normal text-[#e9f85b] tracking-wide font-sans">
+              SolarRays microgrid network
+            </span>
+          </div>
+
+          {/* Center Main Headline */}
+          <div className="relative z-10 max-w-lg my-auto py-8">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-light text-[#f0f0e8] tracking-[-0.04em] leading-[1.06] mb-4">
+              Clean solar energy, <br />
+              <em className="text-[#e9f85b] font-normal italic font-serif">seamlessly traded.</em>
             </h1>
-            <p className="text-xs text-slate-400 tracking-wide">
-              Decentralized Energy Trading &amp; Slot Management
+            <p className="text-sm sm:text-base text-[#92988d] font-light leading-relaxed">
+              Connect solar assets to regional microgrid nodes. Schedule energy injection and dispatch power directly.
             </p>
           </div>
-        </div>
 
-        {/* Authentication Mode Switcher Tabs */}
-        <div className="flex p-1 rounded-2xl bg-white/[0.04] border border-white/10 mb-6">
-          <button
-            type="button"
-            onClick={() => setAuthMode('password')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
-              authMode === 'password'
-                ? 'bg-[#FFD000] text-black shadow-lg shadow-[#FFD000]/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Lock className="w-3.5 h-3.5" />
-            <span>Password Sign In</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setAuthMode('otp')}
-            className={`flex-1 py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${
-              authMode === 'otp'
-                ? 'bg-[#FFD000] text-black shadow-lg shadow-[#FFD000]/20'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>One-Time Passcode</span>
-          </button>
-        </div>
+          {/* Bottom Simple Caption */}
+          <div className="relative z-10 text-xs text-[#666c63]">
+            SolarRays Microgrid Platform
+          </div>
+        </section>
 
-        {/* Mode 1: Email or Username & Password */}
-        {authMode === 'password' && (
-          <motion.form
-            key="password-mode"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-            onSubmit={handlePasswordLogin}
-            className="space-y-4"
-          >
-            {/* Email or Username Input */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                Registered Email or Username
-              </label>
-              <div className="relative">
-                <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. operator@solarmicrogrid.com or username"
-                  value={identifier}
-                  onChange={(e) => setIdentifier(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                />
-              </div>
+        {/* Right Column: Ultra-Minimal Clean Auth Card */}
+        <section className="lg:col-span-5 flex flex-col justify-center p-6 sm:p-12 lg:p-16 bg-[#111410] relative">
+          <div className="max-w-sm w-full mx-auto">
+            {/* Header */}
+            <div className="mb-6">
+              <h2 className="text-2xl sm:text-3xl font-light text-[#f0f0e8] tracking-tight mb-1">
+                Sign <em className="text-[#e9f85b] font-normal italic font-serif">in.</em>
+              </h2>
+              <p className="text-xs text-[#92988d]">
+                Enter your details to access your account.
+              </p>
             </div>
 
-            {/* Password Input */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Password
-                </label>
-              </div>
-              <div className="relative">
-                <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  placeholder="Enter your account password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-11 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition-colors"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loggingIn}
-              className="w-full yellow-pill-btn py-3.5 text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl shadow-[#FFD000]/20 disabled:opacity-50 mt-2"
-            >
-              {loggingIn ? (
-                <>
-                  <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                  <span>Authenticating...</span>
-                </>
-              ) : (
-                <>
-                  <span>Sign In</span>
-                  <ArrowRight className="w-4 h-4 text-black" />
-                </>
-              )}
-            </button>
-          </motion.form>
-        )}
-
-        {/* Mode 2: One-Time Passcode to Registered User's Email */}
-        {authMode === 'otp' && (
-          <AnimatePresence mode="wait">
-            {otpStep === 1 ? (
-              <motion.form
-                key="otp-step-1"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-                onSubmit={handleSendOtp}
-                className="space-y-4"
+            {/* Mode Switcher Tabs */}
+            <div className="grid grid-cols-2 p-1 rounded-xl bg-[#151914] border border-[#2a2f27] mb-6 text-xs">
+              <button
+                type="button"
+                onClick={() => setAuthMode('password')}
+                className={`py-2 rounded-lg font-medium transition-all ${
+                  authMode === 'password'
+                    ? 'bg-[#e9f85b] text-[#0b0d0b] font-medium shadow-sm'
+                    : 'text-[#92988d] hover:text-[#f0f0e8]'
+                }`}
               >
-                {/* Registered Account Identifier */}
+                Password
+              </button>
+              <button
+                type="button"
+                onClick={() => setAuthMode('otp')}
+                className={`py-2 rounded-lg font-medium transition-all ${
+                  authMode === 'otp'
+                    ? 'bg-[#e9f85b] text-[#0b0d0b] font-medium shadow-sm'
+                    : 'text-[#92988d] hover:text-[#f0f0e8]'
+                }`}
+              >
+                One-time code
+              </button>
+            </div>
+
+            {/* Password Login Mode */}
+            {authMode === 'password' && (
+              <form onSubmit={handlePasswordLogin} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
-                    Registered Email or Username
+                  <label className="block text-xs font-medium text-[#92988d] mb-1.5">
+                    Email or username
                   </label>
                   <div className="relative">
-                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                    <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                     <input
                       type="text"
                       required
-                      placeholder="e.g. sanjitha_solar or operator@solarmicrogrid.com"
-                      value={otpIdentifier}
-                      onChange={(e) => setOtpIdentifier(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 rounded-2xl bg-white/[0.04] border border-white/10 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40 transition-all font-medium"
+                      placeholder="Enter your email or username"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
                     />
                   </div>
                 </div>
 
-                <div className="p-3 rounded-2xl bg-white/[0.03] border border-white/5 text-[11px] text-slate-400 space-y-1">
-                  <p className="font-semibold text-slate-300 flex items-center gap-1.5">
-                    <ShieldCheck className="w-3.5 h-3.5 text-[#FFD000]" /> Registered Accounts Only
-                  </p>
-                  <p>
-                    Enter the username or email you registered with. We will look up your account and dispatch a verification passcode to your email.
-                  </p>
-                </div>
-
-                {/* Send OTP Button */}
-                <button
-                  type="submit"
-                  disabled={sendingOtp}
-                  className="w-full yellow-pill-btn py-3.5 text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl shadow-[#FFD000]/20 disabled:opacity-50"
-                >
-                  {sendingOtp ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                      <span>Looking up Account &amp; Sending...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Send Passcode to Registered Email</span>
-                      <ArrowRight className="w-4 h-4 text-black" />
-                    </>
-                  )}
-                </button>
-              </motion.form>
-            ) : (
-              <motion.div
-                key="otp-step-2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="space-y-6"
-              >
-                {/* Destination Summary with Masked Email */}
-                <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <span className="text-[10px] font-black uppercase tracking-wider text-[#FFD000] px-2 py-0.5 rounded-md bg-[#FFD000]/10 border border-[#FFD000]/20 inline-flex items-center gap-1">
-                      <Inbox className="w-3 h-3" />
-                      Passcode Dispatched
-                    </span>
-                    <p className="text-xs text-slate-400">
-                      Sent to registered address:
-                    </p>
-                    {/* User-facing masked email (e.g. sa•••••a@domain.com) */}
-                    <p className="text-sm font-bold font-mono text-white tracking-wide">
-                      {maskedEmail}
-                    </p>
-                    <p className="text-[10px] text-slate-500">
-                      Account: <strong className="text-slate-300">@{otpIdentifier}</strong>
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setOtpStep(1)}
-                    className="px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 hover:text-white flex items-center gap-1 transition-all flex-shrink-0"
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    Change
-                  </button>
-                </div>
-
-                {/* 6-Digit OTP Box Grid */}
                 <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-3 text-center">
-                    Enter 6-Digit Passcode
-                  </label>
-                  <div
-                    className="flex items-center justify-center gap-2 sm:gap-3"
-                    onPaste={handlePaste}
-                  >
-                    {otp.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (otpInputsRef.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleKeyDown(idx, e)}
-                        className={`w-11 h-14 sm:w-12 sm:h-16 text-center text-xl font-mono font-black rounded-2xl bg-white/[0.04] border text-white focus:outline-none transition-all ${
-                          digit
-                            ? 'border-[#FFD000] bg-[#FFD000]/10 shadow-lg shadow-[#FFD000]/10 text-[#FFD000]'
-                            : 'border-white/15 focus:border-[#FFD000] focus:ring-1 focus:ring-[#FFD000]/40'
-                        }`}
-                      />
-                    ))}
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-xs font-medium text-[#92988d]">
+                      Password
+                    </label>
                   </div>
-                  {attemptsRemaining !== null && (
-                    <p className="text-center text-[11px] text-slate-400 mt-2.5">
-                      Security Policy: {attemptsRemaining} attempt(s) remaining.
-                    </p>
-                  )}
-                </div>
-
-                {/* Verification Button */}
-                <button
-                  type="button"
-                  onClick={() => handleVerifyOtp()}
-                  disabled={verifyingOtp || otp.some((d) => !d)}
-                  className="w-full yellow-pill-btn py-3.5 text-xs font-black tracking-wider uppercase flex items-center justify-center gap-2 shadow-xl shadow-[#FFD000]/20 disabled:opacity-40"
-                >
-                  {verifyingOtp ? (
-                    <>
-                      <RefreshCw className="w-4 h-4 animate-spin text-black" />
-                      <span>Authenticating Token...</span>
-                    </>
-                  ) : (
-                    <>
-                      <KeyRound className="w-4 h-4 text-black" />
-                      <span>Verify Passcode &amp; Sign In</span>
-                    </>
-                  )}
-                </button>
-
-                {/* Cooldown & Resend Actions */}
-                <div className="flex items-center justify-between text-xs pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setOtpStep(1)}
-                    className="text-slate-400 hover:text-white transition-colors"
-                  >
-                    &larr; Back
-                  </button>
-
-                  {cooldown > 0 ? (
-                    <span className="text-slate-500 font-medium">
-                      Resend code in <strong className="text-slate-300">{cooldown}s</strong>
-                    </span>
-                  ) : (
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="w-full pl-10 pr-10 py-2.5 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                    />
                     <button
                       type="button"
-                      onClick={() => handleSendOtp()}
-                      disabled={sendingOtp}
-                      className="text-[#FFD000] hover:text-yellow-300 font-bold transition-colors flex items-center gap-1"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#666c63] hover:text-[#f0f0e8]"
+                      aria-label="Toggle password visibility"
                     >
-                      <RefreshCw className={`w-3 h-3 ${sendingOtp ? 'animate-spin' : ''}`} />
-                      Resend Passcode
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
-                  )}
+                  </div>
                 </div>
-              </motion.div>
+
+                <button
+                  type="submit"
+                  disabled={loggingIn}
+                  className="w-full mt-2 py-3 px-4 rounded-xl text-xs font-medium text-[#0b0d0b] bg-[#e9f85b] hover:bg-[#d6e44b] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {loggingIn ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin" />
+                      <span>Signing in...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign in</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
             )}
-          </AnimatePresence>
-        )}
 
-        {/* Development Helper Badge */}
-        <div className="mt-6 p-3 rounded-2xl bg-white/[0.02] border border-white/5 text-[11px] text-slate-400 flex items-center gap-2">
-          <Zap className="w-3.5 h-3.5 text-[#FFD000] flex-shrink-0" />
-          <span>
-            Only registered accounts can log in. Passwords or OTP codes sent to your registered inbox are accepted.
-          </span>
-        </div>
+            {/* OTP Login Mode */}
+            {authMode === 'otp' && (
+              <div className="space-y-4">
+                {otpStep === 1 && (
+                  <form onSubmit={handleSendOtp} className="space-y-4">
+                    <div>
+                      <label className="block text-xs font-medium text-[#92988d] mb-1.5">
+                        Email or username
+                      </label>
+                      <div className="relative">
+                        <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
+                        <input
+                          type="text"
+                          required
+                          placeholder="Enter your email or username"
+                          value={otpIdentifier}
+                          onChange={(e) => setOtpIdentifier(e.target.value)}
+                          className="w-full pl-10 pr-3 py-2.5 rounded-xl bg-[#151914] border border-[#2a2f27] text-sm text-[#f0f0e8] placeholder-[#666c63] focus:outline-none focus:border-[#e9f85b] transition-all"
+                        />
+                      </div>
+                    </div>
 
-        {/* Toggle to Registration */}
-        <div className="mt-6 pt-5 border-t border-white/[0.08] text-center">
-          <p className="text-xs text-slate-400">
-            Don't have a microgrid account?{' '}
-            <Link
-              to="/register"
-              className="text-[#FFD000] hover:text-yellow-300 font-bold transition-colors ml-1 inline-flex items-center gap-1"
-            >
-              <span>Register New Account</span>
-              <ArrowRight className="w-3 h-3" />
-            </Link>
-          </p>
-        </div>
-      </motion.div>
+                    <button
+                      type="submit"
+                      disabled={sendingOtp || cooldown > 0}
+                      className="w-full py-3 px-4 rounded-xl text-xs font-medium text-[#0b0d0b] bg-[#e9f85b] hover:bg-[#d6e44b] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {sendingOtp ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Sending code...</span>
+                        </>
+                      ) : cooldown > 0 ? (
+                        <span>Resend in {cooldown}s</span>
+                      ) : (
+                        <span>Send verification code</span>
+                      )}
+                    </button>
+                  </form>
+                )}
+
+                {otpStep === 2 && (
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <div className="p-3 rounded-xl bg-[#151914] border border-[#2a2f27] flex items-center justify-between text-xs">
+                      <div className="text-[#92988d]">
+                        Sent to: <span className="text-[#f0f0e8] font-medium">{maskedEmail}</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setOtpStep(1);
+                          setOtp(['', '', '', '', '', '']);
+                        }}
+                        className="text-[#e9f85b] hover:underline"
+                      >
+                        Change
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-medium text-[#92988d] mb-2">
+                        6-digit passcode
+                      </label>
+                      <div className="flex gap-2 justify-between">
+                        {otp.map((digit, idx) => (
+                          <input
+                            key={idx}
+                            ref={(el) => (otpInputsRef.current[idx] = el)}
+                            type="text"
+                            inputMode="numeric"
+                            maxLength={idx === 0 ? 6 : 1}
+                            value={digit}
+                            onChange={(e) => handleOtpChange(idx, e.target.value)}
+                            onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                            className="w-11 h-12 text-center text-lg font-bold font-mono rounded-xl bg-[#151914] border border-[#2a2f27] text-[#e9f85b] focus:border-[#e9f85b] focus:outline-none transition-all"
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={verifyingOtp || otp.join('').length !== 6}
+                      className="w-full py-3 px-4 rounded-xl text-xs font-medium text-[#0b0d0b] bg-[#e9f85b] hover:bg-[#d6e44b] transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      {verifyingOtp ? (
+                        <>
+                          <RefreshCw className="w-4 h-4 animate-spin" />
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        <span>Verify &amp; sign in</span>
+                      )}
+                    </button>
+
+                    <div className="text-center pt-1 text-xs">
+                      <button
+                        type="button"
+                        onClick={handleSendOtp}
+                        disabled={cooldown > 0 || sendingOtp}
+                        className="text-[#92988d] hover:text-[#f0f0e8] disabled:opacity-40"
+                      >
+                        {cooldown > 0 ? `Resend code in ${cooldown}s` : 'Resend code'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {/* Footer */}
+            <div className="mt-8 pt-6 border-t border-[#2a2f27] text-xs flex items-center justify-between">
+              <span className="text-[#92988d]">Need an account?</span>
+              <Link to="/register" className="font-semibold text-[#e9f85b] hover:underline no-underline">
+                Create account →
+              </Link>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

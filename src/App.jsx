@@ -1,14 +1,16 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import ReservationManagement from './pages/ReservationManagement';
-import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
+import Onboarding from './pages/Onboarding';
+import ReservationDashboard from './pages/ReservationDashboard';
 import NodeManagement from './pages/NodeManagement';
 import QrScannerPage from './pages/QrScannerPage';
+import BackofficeDashboard from './pages/BackofficeDashboard';
+import ProsumerManagement from './pages/ProsumerManagement';
+import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
 function App() {
   return (
@@ -17,58 +19,88 @@ function App() {
         <Toaster
           position="top-right"
           toastOptions={{
-            className:
-              'font-sans font-semibold text-xs rounded-2xl bg-[#16171E] text-white border border-white/10 shadow-xl',
+            duration: 3600,
+            className: 'ops-toast',
           }}
         />
         <Routes>
-          {/* Public Authentication Routes */}
+          {/* Public Onboarding & Authentication Routes */}
+          <Route path="/" element={<Onboarding />} />
+          <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 
-          {/* Protected Energy Slot Queue (Admin, Prosumer, Consumer) */}
+          {/* Member 2 - Manuga: Backoffice Administration & Prosumer Management */}
           <Route
-            path="/reservations"
+            path="/backoffice"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Prosumer', 'Consumer']}>
-                <ReservationManagement />
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <BackofficeDashboard />
               </ProtectedRoute>
             }
           />
-
-          {/* Protected Admin Prosumer Verification & Approvals Suite */}
           <Route
-            path="/admin/approvals"
+            path="/prosumers"
             element={
-              <ProtectedRoute allowedRoles={['Admin']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <ProsumerManagement />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/prosumers"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
                 <AdminProsumerApprovals />
               </ProtectedRoute>
             }
           />
-          <Route path="/admin" element={<Navigate to="/admin/approvals" replace />} />
 
-          {/* Member 3: Microgrid Node Management (Admin / Grid Operator) */}
+          {/* Protected Energy Slot Queue (Admin, Backoffice, Prosumer, Consumer, GridOperator) */}
+          <Route
+            path="/reservations"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'Prosumer', 'Consumer', 'GridOperator']}>
+                <ReservationDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Member 3 - Avishka: Microgrid Node Management */}
           <Route
             path="/nodes"
             element={
-              <ProtectedRoute allowedRoles={['Admin']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator']}>
                 <NodeManagement />
               </ProtectedRoute>
             }
           />
 
-          {/* Member 4: QR Dispatch Pass Verification Scanner */}
+          {/* Member 4 - QR Dispatch Verification Pass Scanner */}
           <Route
             path="/scan"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Prosumer']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator']}>
                 <QrScannerPage />
               </ProtectedRoute>
             }
           />
 
-          {/* Default and Wildcard Fallbacks */}
-          <Route path="/" element={<Navigate to="/reservations" replace />} />
+          {/* Protected Admin Prosumer Verification & Approvals (Admin Only) */}
+          <Route
+            path="/admin/approvals"
+            element={
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice']}>
+                <AdminProsumerApprovals />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Admin Operations Console Fallback */}
+          <Route path="/admin" element={<Navigate to="/backoffice" replace />} />
+          <Route path="/admin/*" element={<Navigate to="/backoffice" replace />} />
+
+          {/* Wildcard Fallback */}
           <Route path="*" element={<Navigate to="/reservations" replace />} />
         </Routes>
       </Router>
