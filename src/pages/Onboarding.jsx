@@ -29,12 +29,14 @@ const SLIDES = [
   },
 ];
 
+// Onboarding welcomes first-time visitors with an interactive visual tour of the microgrid platform:
+// If a user is already authenticated with valid credentials, it automatically redirects them into the portal.
 export default function Onboarding() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to reservations if already logged in
+  // 1. If user already has an active session, skip onboarding and route to reservations
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/reservations', { replace: true });

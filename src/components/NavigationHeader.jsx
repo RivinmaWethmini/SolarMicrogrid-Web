@@ -5,20 +5,27 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import AccountSettingsModal from './AccountSettingsModal';
 
+// NavigationHeader displays the global microgrid operations top bar:
+// - Renders brand mark and active role subtitle
+// - Dynamically displays navigation links based on user role (Admin, Backoffice, Operator, Prosumer, Consumer)
+// - Displays user profile pill, avatar initials, role badge, settings modal trigger, and sign-out button
 export default function NavigationHeader({ isOffline = false, subtitle = 'Station 01' }) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
+  // 1. Determine user role and permissions for dynamic navigation rendering
   const userRole = (user?.role || '').toLowerCase();
   const isAdmin = userRole === 'admin';
   const isBackoffice = isAdmin || userRole === 'backoffice';
   const isOperator = userRole === 'gridoperator';
 
+  // 2. Sign out handler: Revokes session in backend and redirects user to login screen
   const handleLogout = async () => {
     try {
       toast.dismiss();
+      // Invoke AuthContext logout to call /auth/logout and wipe local storage
       await logout();
       toast.success('Logged out successfully');
       navigate('/login');
@@ -28,6 +35,7 @@ export default function NavigationHeader({ isOffline = false, subtitle = 'Statio
     }
   };
 
+  // Helper to determine if a route is currently active
   const isActive = (path) => {
     return location.pathname.startsWith(path);
   };

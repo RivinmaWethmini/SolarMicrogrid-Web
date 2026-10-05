@@ -12,10 +12,15 @@ import BackofficeDashboard from './pages/BackofficeDashboard';
 import ProsumerManagement from './pages/ProsumerManagement';
 import AdminProsumerApprovals from './pages/AdminProsumerApprovals';
 
+// Main Application Component for Solar Microgrid Operations Portal:
+// - Wraps application in AuthProvider to give child routes access to user state, login, and token methods
+// - Configures React Router with public authentication pages and role-protected dashboards
 function App() {
   return (
+    // 1. Global AuthProvider provides session hydration, token management, and RBAC helpers
     <AuthProvider>
       <Router>
+        {/* Global Toast Notification System */}
         <Toaster
           position="top-right"
           toastOptions={{
@@ -24,7 +29,7 @@ function App() {
           }}
         />
         <Routes>
-          {/* Public Onboarding & Authentication Routes */}
+          {/* Public Onboarding & Authentication Routes (accessible to unauthenticated guests) */}
           <Route path="/" element={<Onboarding />} />
           <Route path="/onboarding" element={<Onboarding />} />
           <Route path="/login" element={<Login />} />

@@ -14,15 +14,27 @@ import {
   Check,
   AlertTriangle,
   RefreshCw,
+  Smartphone,
+  Laptop,
+  Globe,
+  LogOut,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { authApi } from '../services/api';
 
+// AccountSettingsModal enables authenticated users to manage their identity:
+// 1. Update personal details (Full Name, Username)
+// 2. Rotate login passwords securely with current password confirmation
+// 3. Inspect active connected devices / sessions stored in MongoDB
+// 4. Remotely terminate lost, stolen, or unrecognized device sessions
+// 5. Permanently terminate user account in the Danger Zone
 export default function AccountSettingsModal({ isOpen, onClose }) {
   const { user, updateProfile, deleteAccount } = useAuth();
   const navigate = useNavigate();
 
+  // Local form state for profile and password changes
   const [fullName, setFullName] = useState('');
   const [username, setUsername] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -42,7 +54,42 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
   const isAdmin = userRole === 'admin' || userRole === 'backoffice';
   const isConsumerOrProsumer = userRole === 'consumer' || userRole === 'prosumer';
 
-  // Synchronize initial form state whenever modal opens or user updates
+  // Active Sessions / Device Management State
+  const [sessions, setSessions] = useState([]);
+  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [revokingSessionId, setRevokingSessionId] = useState(null);
+
+  // 1. Fetch active device sessions from backend /auth/sessions endpoint
+  const fetchSessions = async () => {
+    try {
+      setIsLoadingSessions(true);
+      const data = await authApi.getSessions();
+      setSessions(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.warn('Could not load active sessions:', err);
+    } finally {
+      setIsLoadingSessions(false);
+    }
+  };
+
+  // 2. Remotely revoke a specific device session
+  const handleRevokeSession = async (sessionId) => {
+    try {
+      setRevokingSessionId(sessionId);
+      // Invalidate session in backend MongoDB
+      await authApi.revokeSession(sessionId);
+      toast.success('Device disconnected! That session has been revoked.');
+      // Remove revoked session from local list immediately
+      setSessions((prev) => prev.filter((s) => (s.sessionId || s.id) !== sessionId));
+    } catch (err) {
+      const msg = err.response?.data?.message || err.message || 'Failed to revoke device session.';
+      toast.error(msg);
+    } finally {
+      setRevokingSessionId(null);
+    }
+  };
+
+  // 3. Synchronize form fields and retrieve active sessions whenever the modal opens
   useEffect(() => {
     if (user && isOpen) {
       setFullName(user.fullName || '');
@@ -52,24 +99,29 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
       setConfirmPassword('');
       setShowDeleteConfirm(false);
       setDeleteConfirmationText('');
+      fetchSessions();
     }
   }, [user, isOpen]);
 
   if (!isOpen || !user) return null;
 
+  // --- SAVE PROFILE & PASSWORD ROTATION HANDLER ---
   const handleSaveProfile = async (e) => {
     e.preventDefault();
 
+    // 1. Validate full legal name
     if (!fullName.trim()) {
       toast.error('Full name cannot be blank.');
       return;
     }
 
+    // 2. Validate username length if provided
     if (username.trim().length > 0 && username.trim().length < 3) {
       toast.error('Username must be at least 3 characters.');
       return;
     }
 
+    // 3. If updating password, validate current password and confirmation match
     if (newPassword || currentPassword) {
       if (!currentPassword) {
         toast.error('Please enter your current password to set a new password.');
@@ -87,6 +139,7 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
 
     try {
       setIsSaving(true);
+      // 4. Submit updated profile details to backend /auth/profile
       await updateProfile({
         fullName: fullName.trim(),
         username: username.trim() || undefined,
@@ -107,7 +160,9 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
     }
   };
 
+  // --- DANGER ZONE: SELF-SERVICE ACCOUNT TERMINATION ---
   const handleDeleteAccount = async () => {
+    // 1. Require explicit confirmation by typing "DELETE"
     if (deleteConfirmationText !== 'DELETE') {
       toast.error('Please type DELETE to confirm account removal.');
       return;
@@ -115,6 +170,7 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
 
     try {
       setIsDeleting(true);
+      // 2. Call backend /auth/account endpoint to permanently remove the user
       await deleteAccount();
       toast.success('Your account has been deleted.');
       onClose();
@@ -316,6 +372,96 @@ export default function AccountSettingsModal({ isOpen, onClose }) {
               </button>
             </div>
           </form>
+
+          {/* Section: Connected Devices & Remote Revocation */}
+          <div className="mt-6 pt-5 border-t border-[#2a2f27]">
+            <div className="flex items-center justify-between mb-2">
+              <div>
+                <h3 className="text-xs font-semibold text-[#f0f0e8] uppercase tracking-wider flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-[#e9f85b]" />
+                  Active Devices & Security Sessions
+                </h3>
+                <p className="text-[11px] text-[#92988d] mt-0.5">
+                  Lost or stolen device? Revoke it below to instantly log it out.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={fetchSessions}
+                disabled={isLoadingSessions}
+                className="p-1.5 rounded-lg text-[#92988d] hover:text-[#f0f0e8] hover:bg-[#1b2219] transition-colors"
+                title="Refresh sessions"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isLoadingSessions ? 'animate-spin text-[#e9f85b]' : ''}`} />
+              </button>
+            </div>
+
+            <div className="space-y-2 mt-3">
+              {isLoadingSessions && sessions.length === 0 ? (
+                <div className="p-3 rounded-xl bg-[#151914] border border-[#2a2f27] text-xs text-[#92988d] text-center flex items-center justify-center gap-2">
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#e9f85b]" />
+                  <span>Loading connected devices...</span>
+                </div>
+              ) : sessions.length === 0 ? (
+                <div className="p-3 rounded-xl bg-[#151914] border border-[#2a2f27] text-xs text-[#92988d] text-center">
+                  No other active sessions detected.
+                </div>
+              ) : (
+                sessions.map((sess) => {
+                  const sId = sess.sessionId || sess.id;
+                  const isCurrent = sess.isCurrentSession;
+                  const devInfo = sess.deviceInfo || 'SolarMicrogrid Web Client';
+                  const isMobile = devInfo.toLowerCase().includes('phone') || devInfo.toLowerCase().includes('mobile') || devInfo.toLowerCase().includes('android');
+
+                  return (
+                    <div
+                      key={sId}
+                      className="p-3 rounded-xl bg-[#151914] border border-[#2a2f27] flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#1b2219] border border-[#2a2f27] flex items-center justify-center text-[#e9f85b] shrink-0">
+                          {isMobile ? <Smartphone className="w-4 h-4" /> : <Laptop className="w-4 h-4" />}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-medium text-[#f0f0e8] truncate flex items-center gap-2">
+                            <span>{devInfo}</span>
+                            {isCurrent && (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-[#1e2e1c] text-[#86efac] border border-[#22c55e]/30 flex items-center gap-1 shrink-0">
+                                <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] animate-pulse"></span>
+                                Current Device
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[11px] text-[#666c63] flex items-center gap-2 mt-0.5">
+                            <span>IP: {sess.ipAddress || '127.0.0.1'}</span>
+                            <span>•</span>
+                            <span>Active: {new Date(sess.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {!isCurrent && (
+                        <button
+                          type="button"
+                          disabled={revokingSessionId === sId}
+                          onClick={() => handleRevokeSession(sId)}
+                          className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-[#f87171] bg-[#2a1315] hover:bg-[#3d181b] border border-[#ef4444]/30 flex items-center gap-1.5 transition-colors shrink-0 cursor-pointer disabled:opacity-50"
+                          title="Revoke device access"
+                        >
+                          {revokingSessionId === sId ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <LogOut className="w-3.5 h-3.5" />
+                          )}
+                          <span>Revoke</span>
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
 
           {/* Section: Account Termination / Deletion */}
           <div className="mt-6 pt-5 border-t border-[#2a2f27]">

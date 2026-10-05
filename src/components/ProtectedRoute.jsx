@@ -16,16 +16,23 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+// ProtectedRoute enforces access control across the microgrid frontend:
+// 1. Session loading state during initial token hydration
+// 2. Unauthenticated redirection to login
+// 3. Prosumer / Operator verification & KYC approval gate
+// 4. Role-Based Access Control (RBAC) route permission checks
 export default function ProtectedRoute({ allowedRoles, requireApproval = false, children }) {
   const { user, loading, isAuthenticated, logout, refreshProfile } = useAuth();
   const location = useLocation();
   const [checkingStatus, setCheckingStatus] = useState(false);
-  // Snapshot preview bypass for authentic system documentation
+
+  // Snapshot preview bypass for authentic system documentation and visual reviews
   if (location.search.includes('preview=true')) {
     return children ? children : <Outlet />;
   }
 
   // 1. Session Hydration / Verification Loading State
+  // Displays an ambient spinner while validating stored JWT tokens on initial app startup
   if (loading && !user) {
     return (
       <div className="min-h-screen bg-[#08090C] text-white flex flex-col items-center justify-center p-6 relative overflow-hidden">
@@ -55,13 +62,13 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
     );
   }
 
-  // 2. Unauthenticated -> Redirect to Login
+  // 2. Unauthenticated check: Redirect guest users to /login preserving the requested return URL
   if (!isAuthenticated || !user) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
   // 3. Prosumer & Operator Approval Workflow Guard
-  // BUSINESS RULE: Operators must be approved by an Admin before accessing the system; Prosumers must be approved before trading.
+  // Business Rule: Operators must be approved by an Admin; Prosumers must be approved before trading solar energy.
   const userRole = (user.role || '').toLowerCase();
   const isOperator = userRole === 'gridoperator' || userRole === 'operator' || userRole === 'admin';
   const isProsumer = userRole === 'prosumer';
@@ -70,6 +77,7 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
     const isPending = user.approvalStatus === 'PendingApproval';
     const isRejected = user.approvalStatus === 'Rejected';
 
+    // Handler to re-poll approval status directly against backend /auth/me
     const handleCheckStatus = async () => {
       try {
         setCheckingStatus(true);
@@ -247,12 +255,14 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
   }
 
   // 4. Role-Based Access Control (RBAC) Verification
+  // Compares the authenticated user's assigned role against allowedRoles for this route
   if (allowedRoles && allowedRoles.length > 0) {
     const userRole = (user.role || '').toLowerCase();
     const hasRequiredRole = allowedRoles.some(
       (role) => role.toLowerCase() === userRole
     );
 
+    // If user lacks required role, display an access restricted holding screen
     if (!hasRequiredRole) {
       return (
         <div className="min-h-screen bg-[#08090C] text-white flex items-center justify-center p-6 relative">
@@ -309,6 +319,6 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
     }
   }
 
-  // 5. Authorized
+  // 5. Authorized: Render protected children components or nested route Outlet
   return children ? children : <Outlet />;
 }

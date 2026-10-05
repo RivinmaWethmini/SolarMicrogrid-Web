@@ -18,17 +18,23 @@ import { authApi } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import solisFacilityImg from '../assets/images/solis-facility.jpg';
 
+// Login page supporting dual authentication strategies:
+// 1. Traditional password-based authentication
+// 2. Passwordless 6-digit email OTP verification
 export default function Login() {
   const { loginWithAuthResponse, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Helper to determine where the user should be routed after signing in
   const getPostLoginDestination = (targetUser) => {
     const role = (targetUser?.role || user?.role || '').toLowerCase();
     const isBackoffice = role === 'admin' || role === 'backoffice';
     const fromPath = location.state?.from?.pathname;
 
+    // If user attempted to reach a specific deep link before being intercepted
     if (fromPath && typeof fromPath === 'string') {
+      // Prevent non-backoffice users from redirecting to restricted admin routes
       if ((fromPath.startsWith('/admin') || fromPath.startsWith('/backoffice')) && !isBackoffice) {
         return '/reservations';
       }
@@ -38,10 +44,11 @@ export default function Login() {
       return fromPath;
     }
 
+    // Default route: backoffice dashboard for admins, reservation ledger for consumers/prosumers
     return isBackoffice ? '/backoffice' : '/reservations';
   };
 
-  // If already authenticated, safely redirect to the allowed destination
+  // 1. If user is already authenticated, immediately redirect them to their destination
   useEffect(() => {
     if (isAuthenticated) {
       const destination = getPostLoginDestination(user);
@@ -69,7 +76,7 @@ export default function Login() {
 
   const otpInputsRef = useRef([]);
 
-  // Cooldown countdown timer
+  // 2. Cooldown timer countdown for OTP resend requests (prevents spamming email provider)
   useEffect(() => {
     if (cooldown <= 0) return;
     const interval = setInterval(() => {
@@ -78,16 +85,18 @@ export default function Login() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  // --- PASSWORD LOGIN SUBMIT ---
+  // --- PASSWORD LOGIN SUBMIT HANDLER ---
   const handlePasswordLogin = async (e) => {
     e.preventDefault();
 
+    // 1. Validate identifier input
     const trimmedIdentifier = identifier.trim();
     if (!trimmedIdentifier) {
       toast.error('Please enter your email or username.');
       return;
     }
 
+    // 2. Validate password input
     if (!password) {
       toast.error('Please enter your password.');
       return;
@@ -95,15 +104,21 @@ export default function Login() {
 
     try {
       setLoggingIn(true);
+      // 3. Submit credentials to backend /auth/login endpoint
       const authResponse = await authApi.login(trimmedIdentifier, password);
+      
+      // 4. Store tokens in localStorage and update AuthContext user state
       loginWithAuthResponse(authResponse);
 
+      // 5. Present friendly personalized welcome toast
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || authResponse.user?.email;
       toast.success(`Welcome back, ${userGreeting}!`);
 
+      // 6. Direct user to appropriate console or requested page
       const destination = getPostLoginDestination(authResponse.user);
       navigate(destination, { replace: true });
     } catch (err) {
+      // Extract specific backend error message or provide a friendly connection hint
       let msg = err.response?.data?.message;
       if (!msg) {
         if (err.code === 'ERR_NETWORK' || err.message === 'Network Error' || !err.response) {
@@ -118,10 +133,11 @@ export default function Login() {
     }
   };
 
-  // --- OTP SEND ---
+  // --- OTP SEND HANDLER ---
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
 
+    // 1. Verify user entered an identifier
     const trimmed = otpIdentifier.trim();
     if (!trimmed) {
       toast.error('Please enter your registered email or username.');
@@ -130,13 +146,16 @@ export default function Login() {
 
     try {
       setSendingOtp(true);
+      // 2. Request backend to generate and dispatch a 6-digit OTP to user's registered email
       const res = await authApi.sendLoginOtp(trimmed);
 
+      // 3. Advance to step 2, show masked recipient email, and activate 60s cooldown
       setMaskedEmail(res.maskedEmail || trimmed);
       setOtpStep(2);
       setCooldown(60);
       toast.success(`Verification code sent to ${res.maskedEmail || 'your email'}`, { icon: '📧' });
 
+      // 4. Auto-focus the first digit input field
       setTimeout(() => {
         otpInputsRef.current[0]?.focus();
       }, 150);
@@ -148,8 +167,9 @@ export default function Login() {
     }
   };
 
-  // --- OTP DIGIT HANDLING ---
+  // --- OTP DIGIT HANDLING & FOCUS AUTO-ADVANCE ---
   const handleOtpChange = (index, value) => {
+    // Support pasting multi-digit verification codes into any box
     if (value.length > 1) {
       const digits = value.replace(/\D/g, '').slice(0, 6).split('');
       const newOtp = [...otp];
@@ -162,6 +182,7 @@ export default function Login() {
       return;
     }
 
+    // Single digit input: sanitize and advance focus to the next box
     const cleanChar = value.replace(/\D/g, '');
     const newOtp = [...otp];
     newOtp[index] = cleanChar;
@@ -172,16 +193,18 @@ export default function Login() {
     }
   };
 
+  // Handle backspace navigation between digit boxes
   const handleOtpKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       otpInputsRef.current[index - 1]?.focus();
     }
   };
 
-  // --- OTP VERIFY SUBMIT ---
+  // --- OTP VERIFY SUBMIT HANDLER ---
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
 
+    // 1. Verify all 6 digits are provided
     const finalOtp = otp.join('');
     if (finalOtp.length !== 6) {
       toast.error('Please enter the full 6-digit code.');
@@ -190,17 +213,22 @@ export default function Login() {
 
     try {
       setVerifyingOtp(true);
+      // 2. Submit 6-digit OTP code to /auth/otp/verify
       const authResponse = await authApi.verifyOtp(otpIdentifier.trim(), finalOtp);
+      
+      // 3. Persist tokens and update AuthContext user state
       loginWithAuthResponse(authResponse);
 
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || 'Member';
       toast.success(`Welcome back, ${userGreeting}!`);
 
+      // 4. Navigate user to destination
       const destination = getPostLoginDestination(authResponse.user);
       navigate(destination, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' || !err.response ? 'Cannot connect to backend server (port 5298).' : 'Verification failed. Please check the code.');
       toast.error(msg);
+      // Reset OTP digits on failure so user can re-try
       setOtp(['', '', '', '', '', '']);
       otpInputsRef.current[0]?.focus();
     } finally {

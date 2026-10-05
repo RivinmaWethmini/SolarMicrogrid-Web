@@ -29,11 +29,14 @@ const ROLES = [
   { id: 'Consumer', label: 'Consumer', icon: Users },
 ];
 
+// Register page managing member onboarding and 2-step email verification:
+// Step 1: User provides personal credentials, KYC details (NIC), and selected grid role.
+// Step 2: User confirms email identity using a one-time 6-digit verification code.
 export default function Register() {
   const { loginWithAuthResponse, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // If already authenticated, redirect to reservations
+  // 1. If user is already authenticated, redirect them away from registration
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/reservations', { replace: true });
@@ -53,7 +56,7 @@ export default function Register() {
   const [agreeTerms, setAgreeTerms] = useState(true);
 
   // OTP State
-  const [step, setStep] = useState(1); // 1 = Details, 2 = 6-Digit OTP
+  const [step, setStep] = useState(1); // 1 = Details, 2 = 6-Digit OTP Modal
   const [sendingOtp, setSendingOtp] = useState(false);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [verifying, setVerifying] = useState(false);
@@ -61,7 +64,7 @@ export default function Register() {
 
   const otpInputsRef = useRef([]);
 
-  // Cooldown countdown
+  // 2. Cooldown timer for email OTP resends
   useEffect(() => {
     if (cooldown <= 0) return;
     const interval = setInterval(() => {
@@ -70,37 +73,43 @@ export default function Register() {
     return () => clearInterval(interval);
   }, [cooldown]);
 
-  // Step 1: Submit Details & Send OTP
+  // --- STEP 1: VALIDATE CREDENTIALS & DISPATCH OTP ---
   const handleInitiateRegistration = async (e) => {
     e.preventDefault();
 
+    // 1. Validate email syntax
     const trimmedEmail = email.trim().toLowerCase();
     if (!trimmedEmail || !/^\S+@\S+\.\S+$/.test(trimmedEmail)) {
       toast.error('Please enter a valid email address.');
       return;
     }
 
+    // 2. Validate chosen username
     const trimmedUsername = username.trim();
     if (!trimmedUsername) {
       toast.error('Please choose a username.');
       return;
     }
 
+    // 3. Validate full legal name
     if (!fullName.trim()) {
       toast.error('Please enter your full name.');
       return;
     }
 
+    // 4. Validate password strength
     if (!password || password.length < 6) {
       toast.error('Password must be at least 6 characters.');
       return;
     }
 
+    // 5. Ensure password confirmation matches
     if (password !== confirmPassword) {
       toast.error('Passwords do not match.');
       return;
     }
 
+    // 6. Check agreement to microgrid regulatory terms
     if (!agreeTerms) {
       toast.error('Please agree to the microgrid terms.');
       return;
@@ -108,12 +117,15 @@ export default function Register() {
 
     try {
       setSendingOtp(true);
+      // 7. Request backend to generate and dispatch a 6-digit registration OTP
       const res = await authApi.sendOtp(trimmedEmail, role);
       toast.success(res.message || 'Verification code sent to your email!');
 
+      // 8. Advance view to Step 2 (6-digit OTP verification)
       setStep(2);
       setCooldown(60);
 
+      // Focus the first OTP digit input
       setTimeout(() => {
         otpInputsRef.current[0]?.focus();
       }, 200);
@@ -125,29 +137,34 @@ export default function Register() {
     }
   };
 
-  // Step 2: Handle OTP Digits
+  // --- STEP 2: HANDLE INDIVIDUAL DIGIT INPUT ---
   const handleOtpChange = (index, value) => {
+    // Only accept numeric digit characters
     if (value && !/^\d$/.test(value)) return;
 
     const newOtp = [...otp];
     newOtp[index] = value;
     setOtp(newOtp);
 
+    // Auto-advance focus to next digit input box
     if (value && index < 5) {
       otpInputsRef.current[index + 1]?.focus();
     }
 
+    // If the 6th digit was just completed, trigger submission automatically
     if (value && index === 5 && newOtp.every((d) => d !== '')) {
       handleCompleteRegistration(newOtp.join(''));
     }
   };
 
+  // Handle backspace navigation between digit boxes
   const handleKeyDown = (index, e) => {
     if (e.key === 'Backspace' && !otp[index] && index > 0) {
       otpInputsRef.current[index - 1]?.focus();
     }
   };
 
+  // Handle clipboard paste of a 6-digit code
   const handlePaste = (e) => {
     e.preventDefault();
     const pasted = e.clipboardData.getData('text').trim();
@@ -161,8 +178,9 @@ export default function Register() {
     }
   };
 
-  // Step 2: Complete Registration
+  // --- STEP 2: SUBMIT REGISTRATION & VERIFY OTP ---
   const handleCompleteRegistration = async (codeToVerify) => {
+    // 1. Ensure code is complete
     const finalOtp = typeof codeToVerify === 'string' ? codeToVerify : otp.join('');
     if (finalOtp.length !== 6) {
       toast.error('Please enter all 6 digits.');
@@ -171,6 +189,7 @@ export default function Register() {
 
     try {
       setVerifying(true);
+      // 2. Send registration payload including OTP to backend /auth/register
       const authResponse = await authApi.register({
         email: email.trim().toLowerCase(),
         username: username.trim(),
@@ -182,6 +201,8 @@ export default function Register() {
         deviceInfo: `Web (${fullName || username})`,
       });
 
+      // 3. Check if user requires administrative approval before logging in
+      // Prosumers and Grid Operators require KYC review by an Administrator
       const userRole = (authResponse.user?.role || '').toLowerCase();
       const requiresApproval =
         authResponse.user?.approvalStatus === 'PendingApproval' &&
@@ -197,6 +218,7 @@ export default function Register() {
         return;
       }
 
+      // 4. Consumers and immediate-access roles: activate session immediately
       loginWithAuthResponse(authResponse);
       toast.success(`Welcome to SolarRays Microgrid, ${fullName || username}!`);
       navigate('/reservations', { replace: true });
