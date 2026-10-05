@@ -1,13 +1,14 @@
-ACADEMIC RESEARCH & PROPRIETARY EVALUATION LICENSE
-===============================================================================
+# ACADEMIC RESEARCH & PROPRIETARY EVALUATION LICENSE
+
 PROJECT: Smart Solar Microgrid Trading System (SolarRays) - Web Portal
-MODULE:  SE4040 - Enterprise Application Development
-YEAR:    2026
+MODULE: SE4040 - Enterprise Application Development
+YEAR: 2026
 AUTHORS:
-  - D.M.R.W. Dissanayake (Rivinma Wethmini) [Member 4 - Lead]
-  - Sanjitha R. [Member 2]
-  - Avishka Vikum Hettige [Member 3]
-  - Manuga [Member 1]
+
+- D.M.R.W. Dissanayake (Rivinma Wethmini) [Member 4 - Lead]
+- Sanjitha R. [Member 2]
+- Avishka Vikum Hettige [Member 3]
+- Manuga [Member 1]
 
 COPYRIGHT (C) 2026 THE AUTHORS AND SRI LANKA INSTITUTE OF INFORMATION TECHNOLOGY (SLIIT).
 ALL RIGHTS RESERVED.
@@ -33,4 +34,4 @@ ALL RIGHTS RESERVED.
    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
-===============================================================================
+   ========================
