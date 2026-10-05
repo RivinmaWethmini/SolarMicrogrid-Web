@@ -127,6 +127,23 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
+  // Update profile handler (FullName, Username, Password)
+  const updateProfile = useCallback(async (data) => {
+    const updated = await authApi.updateProfile(data);
+    setUser(updated);
+    const currentRefresh = getRefreshToken();
+    const currentAccess = getAccessToken();
+    setTokens(currentAccess, currentRefresh, updated);
+    return updated;
+  }, []);
+
+  // Delete account handler
+  const deleteAccount = useCallback(async () => {
+    await authApi.deleteAccount();
+    clearTokens();
+    setUser(null);
+  }, []);
+
   // Role verification helper (supports single role or array of roles)
   const hasRole = useCallback(
     (roleOrRoles) => {
@@ -180,6 +197,8 @@ export function AuthProvider({ children }) {
     loginWithAuthResponse,
     logout,
     refreshProfile,
+    updateProfile,
+    deleteAccount,
     hasRole,
     hasPermission,
   };

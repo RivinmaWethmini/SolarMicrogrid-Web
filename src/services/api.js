@@ -13,35 +13,20 @@ export const TOKEN_KEYS = {
   LEGACY_TOKEN: 'token', // Backwards compatibility for existing components
 };
 
-const DEFAULT_ADMIN_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWI2YjExMDVjNGIyN2I1OTc2YmE2ZWEiLCJuYW1laWQiOiI2YWI2YjExMDVjNGIyN2I1OTc2YmE2ZWEiLCJlbWFpbCI6WyJkaXNzYW5heWFrZXJpdmlubWFAZ21haWwuY29tIiwiZGlzc2FuYXlha2VyaXZpbm1hQGdtYWlsLmNvbSJdLCJyb2xlIjpbIkFkbWluIiwiQmFja29mZmljZSJdLCJqdGkiOiI3ZTI2MDZkMy02MGI4LTQ3MmYtODM2MC03NDY0YjVlYWY1NzMiLCJzaWQiOiI2YWJjZTQ2MzI2MzBiMjg2OTcwMWUxODEiLCJhcHByb3ZhbFN0YXR1cyI6IkFwcHJvdmVkIiwicGVybWlzc2lvbiI6WyJtaWNyb2dyaWQ6cmVhZCIsIm1pY3JvZ3JpZDptYW5hZ2UiLCJwcm9zdW1lcjpyZWFkIiwicHJvc3VtZXI6bWFuYWdlIiwicmVzZXJ2YXRpb246cmVhZCIsInJlc2VydmF0aW9uOmNyZWF0ZSIsInJlc2VydmF0aW9uOmNhbmNlbCIsInJlc2VydmF0aW9uOm1hbmFnZSIsInVzZXI6bWFuYWdlIiwiYXVkaXQ6cmVhZCIsInNlc3Npb246cmV2b2tlIl0sIm5iZiI6MTc5MDc2NDEzMSwiZXhwIjoxNzkwNzY1MDMxLCJpYXQiOjE3OTA3NjQxMzEsImlzcyI6IlNvbGFyTWljcm9ncmlkQVBJIiwiYXVkIjoiU29sYXJNaWNyb2dyaWRDbGllbnRzIn0.2J_tkwbnk8hPlN-9x6h5zVnhA_CNd4dEA2wqfV9QkpU';
-
-const DEFAULT_ADMIN_USER = {
-  id: '6ab6b1105c4b27b5976ba6ea',
-  email: 'dissanayakerivinma@gmail.com',
-  username: 'Rivinma',
-  role: 'Admin',
-  permissions: ['microgrid:read', 'microgrid:manage', 'prosumer:read', 'prosumer:manage', 'reservation:read', 'reservation:create', 'reservation:cancel', 'reservation:manage', 'user:manage', 'audit:read', 'session:revoke'],
-  isActive: true,
-  isVerified: true,
-  approvalStatus: 'Approved',
-  fullName: 'Rivinma Dissanayake (Admin)',
-  nic: '200278100336'
-};
-
 export const getAccessToken = () =>
-  localStorage.getItem(TOKEN_KEYS.ACCESS) || localStorage.getItem(TOKEN_KEYS.LEGACY_TOKEN) || DEFAULT_ADMIN_TOKEN;
+  localStorage.getItem(TOKEN_KEYS.ACCESS) || localStorage.getItem(TOKEN_KEYS.LEGACY_TOKEN) || null;
 
 export const getRefreshToken = () =>
-  localStorage.getItem(TOKEN_KEYS.REFRESH) || 'fyVD3NYqQkivpAfYAzs0wc5oOxMDdgSo8pBePH7YA6xZ8kY6mmU6DYGFD1YJwRQRif5PUP-vkCanuq9WUjLE8Q';
+  localStorage.getItem(TOKEN_KEYS.REFRESH) || null;
 
 export const getStoredUser = () => {
   try {
     const raw = localStorage.getItem(TOKEN_KEYS.USER);
     if (raw) return JSON.parse(raw);
   } catch {
-    // Fall back to default admin profile
+    // Ignore invalid JSON in localStorage
   }
-  return DEFAULT_ADMIN_USER;
+  return null;
 };
 
 export const setTokens = (accessToken, refreshToken, user = null) => {
@@ -146,24 +131,10 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
         return api(originalRequest);
       } catch (refreshError) {
-        // Automatic fallback: silent re-login with administrator credentials
-        try {
-          const loginRes = await axios.post(`${API_BASE_URL}/auth/login`, {
-            identifier: 'dissanayakerivinma@gmail.com',
-            password: 'rivinma12',
-            deviceInfo: 'SolarMicrogrid Web Dashboard Auto-Recovery',
-          });
-          const { accessToken, refreshToken, user } = loginRes.data;
-          setTokens(accessToken, refreshToken, user);
-          processQueue(null, accessToken);
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-          return api(originalRequest);
-        } catch {
-          processQueue(refreshError, null);
-          clearTokens();
-          window.dispatchEvent(new Event('auth:unauthorized'));
-          return Promise.reject(refreshError);
-        }
+        processQueue(refreshError, null);
+        clearTokens();
+        window.dispatchEvent(new Event('auth:unauthorized'));
+        return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
@@ -244,6 +215,21 @@ export const authApi = {
     return response.data;
   },
 
+  updateProfile: async ({ fullName, username, currentPassword, newPassword }) => {
+    const response = await api.put('/auth/profile', {
+      fullName: fullName?.trim() || undefined,
+      username: username?.trim() || undefined,
+      currentPassword: currentPassword || undefined,
+      newPassword: newPassword || undefined,
+    });
+    return response.data;
+  },
+
+  deleteAccount: async () => {
+    const response = await api.delete('/auth/account');
+    return response.data;
+  },
+
   // Admin Prosumer Approval & Grid Operations
   getProsumers: async (status = '') => {
     const query = status ? `?status=${encodeURIComponent(status)}` : '';
@@ -268,6 +254,11 @@ export const authApi = {
 
   resetProsumerToPending: async (id) => {
     const response = await api.put(`/admin/prosumers/${id}/pending`);
+    return response.data;
+  },
+
+  deleteUser: async (id) => {
+    const response = await api.delete(`/admin/users/${id}`);
     return response.data;
   },
 

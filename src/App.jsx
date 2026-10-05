@@ -70,7 +70,7 @@ function App() {
           <Route
             path="/nodes"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator', 'Prosumer']}>
                 <NodeManagement />
               </ProtectedRoute>
             }
@@ -80,7 +80,7 @@ function App() {
           <Route
             path="/scan"
             element={
-              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator']}>
+              <ProtectedRoute allowedRoles={['Admin', 'Backoffice', 'GridOperator', 'Prosumer']}>
                 <QrScannerPage />
               </ProtectedRoute>
             }

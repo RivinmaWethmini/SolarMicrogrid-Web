@@ -19,17 +19,35 @@ import { useAuth } from '../context/AuthContext';
 import solisFacilityImg from '../assets/images/solis-facility.jpg';
 
 export default function Login() {
-  const { loginWithAuthResponse, isAuthenticated } = useAuth();
+  const { loginWithAuthResponse, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // If already authenticated, redirect to reservations
+  const getPostLoginDestination = (targetUser) => {
+    const role = (targetUser?.role || user?.role || '').toLowerCase();
+    const isBackoffice = role === 'admin' || role === 'backoffice';
+    const fromPath = location.state?.from?.pathname;
+
+    if (fromPath && typeof fromPath === 'string') {
+      if ((fromPath.startsWith('/admin') || fromPath.startsWith('/backoffice')) && !isBackoffice) {
+        return '/reservations';
+      }
+      if (fromPath === '/login' || fromPath === '/register' || fromPath === '/') {
+        return isBackoffice ? '/backoffice' : '/reservations';
+      }
+      return fromPath;
+    }
+
+    return isBackoffice ? '/backoffice' : '/reservations';
+  };
+
+  // If already authenticated, safely redirect to the allowed destination
   useEffect(() => {
     if (isAuthenticated) {
-      const destination = location.state?.from?.pathname || '/reservations';
+      const destination = getPostLoginDestination(user);
       navigate(destination, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, user, navigate, location]);
 
   // Auth Mode: 'password' | 'otp'
   const [authMode, setAuthMode] = useState('password');
@@ -83,15 +101,7 @@ export default function Login() {
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || authResponse.user?.email;
       toast.success(`Welcome back, ${userGreeting}!`);
 
-      const userRole = authResponse.user?.role?.toLowerCase();
-      const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
-      let destination = location.state?.from?.pathname;
-      if (destination && destination.startsWith('/admin') && !isBackoffice) {
-        destination = '/reservations';
-      }
-      if (!destination) {
-        destination = isBackoffice ? '/backoffice' : '/reservations';
-      }
+      const destination = getPostLoginDestination(authResponse.user);
       navigate(destination, { replace: true });
     } catch (err) {
       let msg = err.response?.data?.message;
@@ -186,15 +196,7 @@ export default function Login() {
       const userGreeting = authResponse.user?.fullName || authResponse.user?.username || 'Member';
       toast.success(`Welcome back, ${userGreeting}!`);
 
-      const userRole = authResponse.user?.role?.toLowerCase();
-      const isBackoffice = userRole === 'admin' || userRole === 'backoffice';
-      let destination = location.state?.from?.pathname;
-      if (destination && destination.startsWith('/admin') && !isBackoffice) {
-        destination = '/reservations';
-      }
-      if (!destination) {
-        destination = isBackoffice ? '/backoffice' : '/reservations';
-      }
+      const destination = getPostLoginDestination(authResponse.user);
       navigate(destination, { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || (err.code === 'ERR_NETWORK' || !err.response ? 'Cannot connect to backend server (port 5298).' : 'Verification failed. Please check the code.');
@@ -320,6 +322,8 @@ export default function Login() {
                     <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                     <input
                       type="text"
+                      name="username"
+                      autoComplete="username"
                       required
                       placeholder="Enter your email or username"
                       value={identifier}
@@ -339,6 +343,8 @@ export default function Login() {
                     <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                     <input
                       type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      autoComplete="current-password"
                       required
                       placeholder="Your password"
                       value={password}

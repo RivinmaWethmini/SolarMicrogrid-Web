@@ -14,31 +14,12 @@ import {
   Check,
   AlertTriangle,
   RotateCcw,
+  Trash2,
 } from 'lucide-react';
 import { authApi } from '../services/api';
 import NavigationHeader from '../components/NavigationHeader';
 
 const STORAGE_KEY_DECISIONS = 'solarrays_prosumer_approval_decisions';
-
-function getStoredDecisions() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_DECISIONS);
-    return raw ? JSON.parse(raw) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveStoredDecision(key, data) {
-  if (!key) return;
-  try {
-    const all = getStoredDecisions();
-    all[key] = data;
-    localStorage.setItem(STORAGE_KEY_DECISIONS, JSON.stringify(all));
-  } catch (err) {
-    console.warn('Could not save decision:', err);
-  }
-}
 
 function clearStoredDecisions() {
   try {
@@ -53,6 +34,7 @@ const FALLBACK_PROSUMERS = [
     id: '6abd1be42630b2869701e19b',
     fullName: 'Kavindu Perera',
     email: 'kavindu.solar@example.com',
+    role: 'Prosumer',
     nic: '199245100234',
     approvalStatus: 'PendingApproval',
     createdAt: '2026-09-28T09:30:00Z',
@@ -64,6 +46,7 @@ const FALLBACK_PROSUMERS = [
     id: '6abbed2fe716223d4138edfb',
     fullName: 'SunPower Station A',
     email: 'prosumer@solar.com',
+    role: 'Prosumer',
     nic: '200224700740',
     approvalStatus: 'Approved',
     createdAt: '2026-09-29T16:54:06Z',
@@ -73,19 +56,19 @@ const FALLBACK_PROSUMERS = [
   },
   {
     id: '6ab6a6da8227232f73d1fb3a',
-    fullName: 'Test User',
-    email: 'testuser123@example.com',
-    nic: '199812345678',
+    fullName: 'Grid Site Operator',
+    email: 'operator@solar.com',
+    role: 'GridOperator',
+    nic: '198500000002',
     approvalStatus: 'Approved',
     createdAt: '2026-09-25T16:52:42Z',
-    solarCapacityKw: 5.0,
-    batteryCapacityKwh: 10.0,
     location: 'Colombo Substation',
   },
   {
     id: '6abcce2fe716223d4138edfc',
     fullName: 'Chathura Wickramasinghe',
     email: 'chathura.w@apexpower.org',
+    role: 'Prosumer',
     nic: '199033200789',
     approvalStatus: 'Rejected',
     createdAt: '2026-09-15T08:45:00Z',
@@ -96,12 +79,12 @@ const FALLBACK_PROSUMERS = [
 ];
 
 export default function AdminProsumerApprovals() {
-  const [prosumers, setProsumers] = useState(FALLBACK_PROSUMERS);
+  const [prosumers, setProsumers] = useState([]);
   const [stats, setStats] = useState({
-    totalProsumers: 4,
-    pendingProsumers: 1,
-    approvedProsumers: 2,
-    rejectedProsumers: 1,
+    totalProsumers: 0,
+    pendingProsumers: 0,
+    approvedProsumers: 0,
+    rejectedProsumers: 0,
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -113,7 +96,15 @@ export default function AdminProsumerApprovals() {
   const [rejectingUser, setRejectingUser] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  // Fetch prosumers and operational metrics
+  // Delete modal state
+  const [deletingUser, setDeletingUser] = useState(null);
+
+  // Clear any stale legacy localStorage decisions on mount
+  useEffect(() => {
+    clearStoredDecisions();
+  }, []);
+
+  // Fetch prosumers and operational metrics from live central database
   const fetchProsumerData = useCallback(async () => {
     try {
       setLoading(true);
@@ -124,38 +115,25 @@ export default function AdminProsumerApprovals() {
         authApi.getAdminStats(),
       ]);
 
-      const decisions = getStoredDecisions();
       let list = [];
 
-      if (prosumersRes.status === 'fulfilled' && Array.isArray(prosumersRes.value) && prosumersRes.value.length > 0) {
+      if (prosumersRes.status === 'fulfilled' && Array.isArray(prosumersRes.value)) {
+        // Live MongoDB data is the sole source of truth
         list = [...prosumersRes.value];
-      } else {
+      } else if (prosumersRes.status === 'rejected') {
+        console.warn('Live API unavailable, using offline applicant cache:', prosumersRes.reason);
+        setError('Server synchronization offline. Displaying local applicant cache.');
         list = [...FALLBACK_PROSUMERS];
       }
 
-      // Merge decisions saved in localStorage (guarantees decisions persist across refreshes)
-      list = list.map((item) => {
-        const decision =
-          decisions[item.id] ||
-          (item.email && decisions[item.email]) ||
-          (item.nic && decisions[item.nic]);
-
-        if (decision) {
-          return {
-            ...item,
-            approvalStatus: decision.status,
-            rejectionReason: decision.rejectionReason ?? item.rejectionReason,
-            approvedAt: decision.approvedAt ?? item.approvedAt,
-          };
-        }
-        return item;
-      });
-
       setProsumers(list);
 
-      const pending = list.filter((p) => p.approvalStatus === 'PendingApproval').length;
-      const approved = list.filter((p) => p.approvalStatus === 'Approved').length;
-      const rejected = list.filter((p) => p.approvalStatus === 'Rejected').length;
+      const pending = list.filter((p) => {
+        const s = (p.approvalStatus || '').toLowerCase();
+        return s === 'pendingapproval' || s === 'pending';
+      }).length;
+      const approved = list.filter((p) => (p.approvalStatus || '').toLowerCase() === 'approved').length;
+      const rejected = list.filter((p) => (p.approvalStatus || '').toLowerCase() === 'rejected').length;
 
       setStats({
         totalProsumers: list.length,
@@ -164,13 +142,9 @@ export default function AdminProsumerApprovals() {
         rejectedProsumers: rejected,
       });
     } catch (err) {
-      console.warn('Prosumer approvals fallback active:', err);
-      const decisions = getStoredDecisions();
-      const list = FALLBACK_PROSUMERS.map((p) => {
-        const d = decisions[p.id] || (p.email && decisions[p.email]);
-        return d ? { ...p, approvalStatus: d.status } : p;
-      });
-      setProsumers(list);
+      console.error('Prosumer approvals fetch error:', err);
+      setError('An error occurred while loading applicants.');
+      setProsumers([]);
     } finally {
       setLoading(false);
     }
@@ -181,35 +155,22 @@ export default function AdminProsumerApprovals() {
   }, [fetchProsumerData]);
 
   // Handle Approve
-  const handleApprove = async (prosumerId, email, nic) => {
+  const handleApprove = async (prosumerId, email, nic, role) => {
     try {
       setActionLoadingId(prosumerId);
-      try {
-        await authApi.approveProsumer(prosumerId);
-      } catch (apiErr) {
-        console.warn('Live API approve call failed, saving decision locally:', apiErr);
-      }
+      await authApi.approveProsumer(prosumerId);
 
-      const approvedAt = new Date().toISOString();
-      saveStoredDecision(prosumerId, { status: 'Approved', approvedAt });
-      if (email) saveStoredDecision(email, { status: 'Approved', approvedAt });
-      if (nic) saveStoredDecision(nic, { status: 'Approved', approvedAt });
+      const isOp =
+        role?.toLowerCase() === 'gridoperator' ||
+        role?.toLowerCase() === 'admin' ||
+        role?.toLowerCase() === 'operator';
+      toast.success(`${isOp ? 'Operator' : 'Prosumer'} ${email || 'account'} approved!`);
 
-      toast.success(`Prosumer ${email || 'application'} approved!`);
-
-      setProsumers((prev) =>
-        prev.map((p) =>
-          p.id === prosumerId || p.email === email
-            ? { ...p, approvalStatus: 'Approved', approvedAt }
-            : p
-        )
-      );
-
-      setStats((prev) => ({
-        ...prev,
-        pendingProsumers: Math.max(0, prev.pendingProsumers - 1),
-        approvedProsumers: prev.approvedProsumers + 1,
-      }));
+      // Refresh authoritative list from database
+      await fetchProsumerData();
+    } catch (apiErr) {
+      console.error('Live API approve call failed:', apiErr);
+      toast.error(apiErr.response?.data?.message || 'Failed to approve application.');
     } finally {
       setActionLoadingId(null);
     }
@@ -220,33 +181,45 @@ export default function AdminProsumerApprovals() {
     if (!rejectingUser) return;
     try {
       setActionLoadingId(rejectingUser.id);
-      try {
-        await authApi.rejectProsumer(rejectingUser.id, rejectReason);
-      } catch (apiErr) {
-        console.warn('Live API reject call failed, saving decision locally:', apiErr);
-      }
+      await authApi.rejectProsumer(rejectingUser.id, rejectReason);
 
-      saveStoredDecision(rejectingUser.id, { status: 'Rejected', rejectionReason: rejectReason });
-      if (rejectingUser.email) saveStoredDecision(rejectingUser.email, { status: 'Rejected', rejectionReason: rejectReason });
-      if (rejectingUser.nic) saveStoredDecision(rejectingUser.nic, { status: 'Rejected', rejectionReason: rejectReason });
+      const isOp =
+        rejectingUser.role?.toLowerCase() === 'gridoperator' ||
+        rejectingUser.role?.toLowerCase() === 'admin' ||
+        rejectingUser.role?.toLowerCase() === 'operator';
+      toast.success(`${isOp ? 'Operator' : 'Prosumer'} application rejected.`);
 
-      toast.success(`Prosumer application rejected.`);
-
-      setProsumers((prev) =>
-        prev.map((p) =>
-          p.id === rejectingUser.id || p.email === rejectingUser.email
-            ? { ...p, approvalStatus: 'Rejected', rejectionReason: rejectReason }
-            : p
-        )
-      );
-
-      setStats((prev) => ({
-        ...prev,
-        pendingProsumers: Math.max(0, prev.pendingProsumers - 1),
-        rejectedProsumers: prev.rejectedProsumers + 1,
-      }));
       setRejectingUser(null);
       setRejectReason('');
+
+      // Refresh authoritative list from database
+      await fetchProsumerData();
+    } catch (apiErr) {
+      console.error('Live API reject call failed:', apiErr);
+      toast.error(apiErr.response?.data?.message || 'Failed to decline application.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  // Handle Permanent Delete User
+  const handleConfirmDelete = async () => {
+    if (!deletingUser) return;
+    try {
+      setActionLoadingId(deletingUser.id);
+      await authApi.deleteUser(deletingUser.id);
+
+      const isOp =
+        deletingUser.role?.toLowerCase() === 'gridoperator' ||
+        deletingUser.role?.toLowerCase() === 'admin' ||
+        deletingUser.role?.toLowerCase() === 'operator';
+      toast.success(`${isOp ? 'Operator' : 'Prosumer'} ${deletingUser.email} has been permanently deleted from database.`);
+
+      setDeletingUser(null);
+      await fetchProsumerData();
+    } catch (apiErr) {
+      console.error('Delete user failed:', apiErr);
+      toast.error(apiErr.response?.data?.message || 'Failed to delete user account.');
     } finally {
       setActionLoadingId(null);
     }
@@ -264,7 +237,7 @@ export default function AdminProsumerApprovals() {
       }
       await fetchProsumerData();
       setFilter('Pending');
-      toast.success('Demonstration pending applicant queue restored.');
+      toast.success('Dossiers synchronized with central Mongo database.');
     } finally {
       setLoading(false);
     }
@@ -272,12 +245,16 @@ export default function AdminProsumerApprovals() {
 
   // Filtering & search
   const filtered = prosumers.filter((p) => {
-    const status = p.approvalStatus || 'Approved';
+    const status = (p.approvalStatus || 'Approved').toLowerCase();
+    const isPending = status === 'pendingapproval' || status === 'pending';
+    const isApproved = status === 'approved';
+    const isRejected = status === 'rejected';
+
     const matchesFilter =
       filter === 'All' ||
-      (filter === 'Pending' && status === 'PendingApproval') ||
-      (filter === 'Approved' && status === 'Approved') ||
-      (filter === 'Rejected' && status === 'Rejected');
+      (filter === 'Pending' && isPending) ||
+      (filter === 'Approved' && isApproved) ||
+      (filter === 'Rejected' && isRejected);
 
     const term = search.toLowerCase();
     const name = (p.fullName || '').toLowerCase();
@@ -297,20 +274,20 @@ export default function AdminProsumerApprovals() {
           <div className="operations-heading node-heading">
             <div className="section-coordinate">
               <span>04</span>
-              <p>Security & KYC / Prosumer Interconnection</p>
+              <p>Security & KYC / Verification Console</p>
             </div>
 
             <h1 id="approvals-title">
-              Prosumer <em>approvals.</em>
+              Account <em>approvals.</em>
             </h1>
 
             <p className="operations-intro">
-              Audit prosumer interconnection applications, verify national identification credentials, and authorize live grid injection access.
+              Audit operator and prosumer registrations, verify identity credentials, and authorize live system and grid access.
             </p>
           </div>
 
           <aside className="node-hero-console" aria-label="Approvals console">
-            <span className="node-console-index">Operator KYC Terminal</span>
+            <span className="node-console-index">Admin Approvals Terminal</span>
             <div className="node-console-status">
               <i aria-hidden="true" />
               Verification queue active
@@ -393,10 +370,10 @@ export default function AdminProsumerApprovals() {
         <section className="node-ledger mt-10" aria-labelledby="applications-manifest-title">
           <div className="node-ledger-heading flex flex-col lg:flex-row lg:items-end justify-between gap-5">
             <div>
-              <span>Interconnection dossiers</span>
-              <h2 id="applications-manifest-title">Prosumer Interconnection Applications</h2>
+              <span>Verification dossiers</span>
+              <h2 id="applications-manifest-title">Operator &amp; Prosumer Applications</h2>
               <p>
-                Showing {filtered.length} of {prosumers.length} registered prosumer applications
+                Showing {filtered.length} of {prosumers.length} registered applicant dossiers
               </p>
             </div>
 
@@ -452,8 +429,8 @@ export default function AdminProsumerApprovals() {
             <table className="node-table">
               <thead>
                 <tr>
-                  <th scope="col">Applicant</th>
-                  <th scope="col">Prosumer NIC / ID</th>
+                  <th scope="col">Applicant &amp; Role</th>
+                  <th scope="col">NIC / System ID</th>
                   <th scope="col">Registered On</th>
                   <th scope="col">Status</th>
                   <th scope="col" className="text-right">Verification Action</th>
@@ -480,10 +457,10 @@ export default function AdminProsumerApprovals() {
                   </tr>
                 ) : (
                   filtered.map((u, idx) => {
-                    const status = u.approvalStatus || 'Approved';
-                    const isPending = status === 'PendingApproval';
-                    const isApproved = status === 'Approved';
-                    const isRejected = status === 'Rejected';
+                    const status = (u.approvalStatus || 'Approved').toLowerCase();
+                    const isPending = status === 'pendingapproval' || status === 'pending';
+                    const isApproved = status === 'approved';
+                    const isRejected = status === 'rejected';
                     const isActioning = actionLoadingId === u.id;
 
                     const regDate = u.createdAt
@@ -493,6 +470,11 @@ export default function AdminProsumerApprovals() {
                           year: 'numeric',
                         })
                       : 'Recently registered';
+
+                    const isOpRole =
+                      u.role?.toLowerCase() === 'gridoperator' ||
+                      u.role?.toLowerCase() === 'admin' ||
+                      u.role?.toLowerCase() === 'operator';
 
                     return (
                       <motion.tr
@@ -512,7 +494,7 @@ export default function AdminProsumerApprovals() {
                                 backgroundColor: 'rgba(255, 255, 255, 0.04)',
                                 display: 'grid',
                                 placeItems: 'center',
-                                color: 'var(--ops-solar)',
+                                color: isOpRole ? '#60a5fa' : 'var(--ops-solar)',
                                 fontWeight: 'bold',
                                 fontSize: '13px',
                               }}
@@ -520,7 +502,18 @@ export default function AdminProsumerApprovals() {
                               {(u.fullName || u.email || 'P')[0].toUpperCase()}
                             </div>
                             <div>
-                              <div className="font-medium text-white text-xs">{u.fullName || 'Registered Prosumer'}</div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-white text-xs">{u.fullName || (isOpRole ? 'Registered Operator' : 'Registered Prosumer')}</span>
+                                {isOpRole ? (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                                    Operator
+                                  </span>
+                                ) : (
+                                  <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30">
+                                    Prosumer
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-[11px] text-[#8c9288] font-mono">{u.email}</div>
                             </div>
                           </div>
@@ -559,7 +552,7 @@ export default function AdminProsumerApprovals() {
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleApprove(u.id, u.email, u.nic)}
+                                  onClick={() => handleApprove(u.id, u.email, u.nic, u.role)}
                                   disabled={isActioning}
                                   className="px-3 py-1.5 text-xs bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded font-medium transition-colors"
                                 >
@@ -594,11 +587,24 @@ export default function AdminProsumerApprovals() {
                             ) : (
                               <button
                                 type="button"
-                                onClick={() => handleApprove(u.id, u.email, u.nic)}
+                                onClick={() => handleApprove(u.id, u.email, u.nic, u.role)}
                                 disabled={isActioning}
                                 className="px-3 py-1 text-xs border border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400 rounded transition-colors"
                               >
                                 Re-approve
+                              </button>
+                            )}
+
+                            {/* Delete Profile button (non-admin accounts) */}
+                            {u.role?.toLowerCase() !== 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => setDeletingUser(u)}
+                                disabled={isActioning}
+                                title={`Permanently delete ${u.email} profile`}
+                                className="p-1.5 text-xs border border-red-500/20 hover:border-red-500/50 hover:bg-red-500/15 text-red-400/80 hover:text-red-300 rounded transition-colors"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             )}
                           </div>
@@ -677,6 +683,73 @@ export default function AdminProsumerApprovals() {
                     className="px-4 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors"
                   >
                     {actionLoadingId === rejectingUser.id ? 'Processing...' : 'Confirm Decision'}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
+
+        {/* Delete Confirmation Modal */}
+        <AnimatePresence>
+          {deletingUser && (
+            <div
+              className="dispatch-modal-overlay"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setDeletingUser(null);
+              }}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="node-panel max-w-lg w-full mx-4 relative"
+                style={{ backgroundColor: '#0f1110', border: '1px solid rgba(239, 68, 68, 0.4)' }}
+              >
+                <div className="flex items-center justify-between pb-4 border-b border-[var(--ops-line)] mb-4">
+                  <div className="flex items-center gap-2 text-red-400">
+                    <Trash2 className="w-5 h-5" />
+                    <h3 className="text-lg font-normal text-white">Permanently Delete Account</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setDeletingUser(null)}
+                    className="node-notice-close"
+                  >
+                    <X className="w-5 h-5 text-slate-400 hover:text-white" />
+                  </button>
+                </div>
+
+                <p className="text-xs text-[#b1b5ac] leading-relaxed mb-4">
+                  Are you sure you want to permanently delete{' '}
+                  <strong className="text-white">{deletingUser.fullName || deletingUser.email}</strong>{' '}
+                  ({deletingUser.email})?
+                </p>
+
+                <div className="p-3 mb-6 rounded border border-red-500/30 bg-red-500/10 text-xs text-red-300">
+                  <p className="font-semibold mb-1">⚠️ Irreversible Database Deletion</p>
+                  <p>
+                    This will permanently erase their credentials from <strong>AuthUsers</strong>,
+                    terminate all active sessions, and remove any linked prosumer record from MongoDB.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--ops-line)]">
+                  <button
+                    type="button"
+                    onClick={() => setDeletingUser(null)}
+                    className="px-4 py-2 text-xs border border-white/10 hover:border-white/20 text-slate-300 rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleConfirmDelete}
+                    disabled={actionLoadingId === deletingUser.id}
+                    className="px-4 py-2 text-xs bg-red-600 hover:bg-red-700 text-white rounded font-medium transition-colors flex items-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {actionLoadingId === deletingUser.id ? 'Deleting...' : 'Permanently Delete'}
                   </button>
                 </div>
               </motion.div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, useLocation, Outlet } from 'react-router-dom';
+import { Navigate, useLocation, Outlet, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import toast from 'react-hot-toast';
 import {
@@ -19,6 +19,7 @@ import { useAuth } from '../context/AuthContext';
 export default function ProtectedRoute({ allowedRoles, requireApproval = false, children }) {
   const { user, loading, isAuthenticated, logout, refreshProfile } = useAuth();
   const location = useLocation();
+  const [checkingStatus, setCheckingStatus] = useState(false);
   // Snapshot preview bypass for authentic system documentation
   if (location.search.includes('preview=true')) {
     return children ? children : <Outlet />;
@@ -59,9 +60,13 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  // 3. Prosumer Approval Workflow Guard
-  // BUSINESS RULE: Prosumers must be approved by an Admin/Operator before accessing grid trading.
-  if (user.role?.toLowerCase() === 'prosumer') {
+  // 3. Prosumer & Operator Approval Workflow Guard
+  // BUSINESS RULE: Operators must be approved by an Admin before accessing the system; Prosumers must be approved before trading.
+  const userRole = (user.role || '').toLowerCase();
+  const isOperator = userRole === 'gridoperator' || userRole === 'operator' || userRole === 'admin';
+  const isProsumer = userRole === 'prosumer';
+
+  if (isProsumer || isOperator) {
     const isPending = user.approvalStatus === 'PendingApproval';
     const isRejected = user.approvalStatus === 'Rejected';
 
@@ -70,15 +75,25 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
         setCheckingStatus(true);
         const updated = await refreshProfile();
         if (updated?.approvalStatus === 'Approved') {
-          toast.success('Congratulations! Your Prosumer account has been approved by the Grid Operator!', {
-            duration: 6000,
-          });
+          toast.success(
+            isOperator
+              ? 'Congratulations! Your Operator account has been approved by an Administrator!'
+              : 'Congratulations! Your Prosumer account has been approved by the Grid Operator!',
+            { duration: 6000 }
+          );
         } else if (updated?.approvalStatus === 'Rejected') {
-          toast.error('Your application has been declined by the operator.');
+          toast.error(
+            isOperator
+              ? 'Your operator account was declined by an administrator.'
+              : 'Your application has been declined by the operator.'
+          );
         } else {
-          toast('Your prosumer verification is still pending operator review.', {
-            icon: '⏳',
-          });
+          toast(
+            isOperator
+              ? 'Your operator verification is still pending administrator review.'
+              : 'Your prosumer verification is still pending operator review.',
+            { icon: '⏳' }
+          );
         }
       } catch {
         toast.error('Unable to refresh verification status. Please check your network.');
@@ -87,7 +102,7 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
       }
     };
 
-    if (isPending && requireApproval) {
+    if (isPending) {
       return (
         <div className="min-h-screen bg-[#08090C] text-white flex items-center justify-center p-6 relative overflow-hidden font-sans">
           {/* Ambient Amber Lighting */}
@@ -108,23 +123,26 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
 
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-[#FFD000]/15 text-[#FFD000] border border-[#FFD000]/30 mb-3">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FFD000] animate-ping" />
-              Awaiting Operator Verification
+              Awaiting Administrator Approval
             </span>
 
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight mb-2">
-              Application Under Review
+              {isOperator ? 'Operator Account Under Review' : 'Prosumer Account Under Review'}
             </h1>
 
             <p className="text-xs text-slate-400 leading-relaxed mb-6 max-w-sm mx-auto">
-              Your Solar Prosumer registration has been recorded and is currently awaiting
-              authorization from an authorized Grid Operator before energy trading is unlocked.
+              {isOperator
+                ? 'Your Operator account registration has been submitted and is currently awaiting authorization from a System Administrator before access to grid operations is unlocked.'
+                : 'Your Solar Prosumer registration has been recorded and is currently awaiting authorization from a System Administrator before access to microgrid energy trading and operational controls is unlocked.'}
             </p>
 
             {/* Application Summary Card */}
             <div className="p-4 rounded-2xl bg-white/[0.03] border border-white/10 text-left mb-6 space-y-2 text-xs">
               <div className="flex items-center justify-between pb-2 border-b border-white/5">
                 <span className="text-slate-400">Account Role</span>
-                <span className="font-bold text-emerald-400 uppercase">Solar Prosumer</span>
+                <span className="font-bold text-emerald-400 uppercase">
+                  {isOperator ? 'Grid Operator' : 'Solar Prosumer'}
+                </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400">Applicant</span>
@@ -136,7 +154,7 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
               </div>
               {user.nic && (
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Prosumer NIC</span>
+                  <span className="text-slate-400">NIC / ID</span>
                   <span className="font-mono text-[#FFD000] font-bold">{user.nic}</span>
                 </div>
               )}
@@ -152,8 +170,9 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
             <div className="p-3.5 rounded-2xl bg-white/[0.02] border border-white/5 text-[11px] text-slate-400 mb-6 flex items-start gap-2.5 text-left">
               <FileCheck2 className="w-4 h-4 text-[#FFD000] flex-shrink-0 mt-0.5" />
               <span>
-                Grid Interconnection Code policies require verification of solar capacity
-                and node telemetry before dispatch rights are activated.
+                {isOperator
+                  ? 'Administrative security policies require identity verification and authorization by a System Administrator before operational controls are enabled.'
+                  : 'Grid Interconnection Code policies require verification of solar capacity and node telemetry before dispatch rights are activated.'}
               </span>
             </div>
 
@@ -195,7 +214,7 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
             </div>
 
             <span className="inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/15 text-red-300 border border-red-500/30 mb-3">
-              Application Declined
+              Registration Declined
             </span>
 
             <h1 className="text-2xl font-black text-white tracking-tight mb-2">
@@ -203,7 +222,9 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
             </h1>
 
             <p className="text-xs text-slate-400 leading-relaxed mb-4">
-              Your Solar Prosumer registration was not approved by the grid supervisor.
+              {isOperator
+                ? 'Your Operator account registration was not approved by a System Administrator.'
+                : 'Your Solar Prosumer registration was not approved by the grid supervisor.'}
             </p>
 
             {user.rejectionReason && (
@@ -269,18 +290,18 @@ export default function ProtectedRoute({ allowedRoles, requireApproval = false, 
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => logout()}
-                className="flex-1 yellow-pill-btn flex items-center justify-center gap-2"
+                className="flex-1 yellow-pill-btn flex items-center justify-center gap-2 py-2.5 text-xs font-semibold"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 Switch Account
               </button>
-              <button
-                onClick={() => window.history.back()}
-                className="flex-1 dark-pill-btn flex items-center justify-center gap-2"
+              <Link
+                to="/reservations"
+                className="flex-1 dark-pill-btn flex items-center justify-center gap-2 py-2.5 text-xs font-semibold no-underline text-center"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Go Back
-              </button>
+                Go to Dashboard
+              </Link>
             </div>
           </motion.div>
         </div>

@@ -353,11 +353,12 @@ export default function ReservationDashboard() {
   const [lastSyncedAt, setLastSyncedAt] = useState(null);
 
   const userRole = (user?.role || '').toLowerCase();
-  const isAdmin = userRole === 'admin';
+  const isOperator = userRole === 'gridoperator' || userRole === 'operator' || userRole === 'admin';
+  const isAdmin = userRole === 'admin' || userRole === 'backoffice';
   const isProsumer = userRole === 'prosumer';
   const isConsumer = userRole === 'consumer';
 
-  const portalConfig = isAdmin
+  const portalConfig = isOperator
     ? {
         title: 'Grid Operator Portal',
         badge: 'Live Operator',
@@ -395,10 +396,12 @@ export default function ReservationDashboard() {
 
   const handleLogout = async () => {
     try {
+      toast.dismiss();
       await logout();
       toast.success('Logged out successfully');
       navigate('/login');
     } catch {
+      toast.dismiss();
       navigate('/login');
     }
   };
@@ -442,8 +445,11 @@ export default function ReservationDashboard() {
       setLastSyncedAt(new Date());
     } catch (fetchError) {
       console.error('Fetch error:', fetchError);
-      setError('Unable to reach the Solar Microgrid API.');
-      toast.error('The reservation ledger could not be refreshed.');
+      // Suppress toast if simply unauthenticated / logging out (401)
+      if (fetchError?.response?.status !== 401) {
+        setError('Unable to reach the Solar Microgrid API.');
+        toast.error('The reservation ledger could not be refreshed.');
+      }
     } finally {
       setLoading(false);
     }
@@ -593,33 +599,6 @@ export default function ReservationDashboard() {
       </header>
 
       <main className="operations-workspace">
-        {isProsumer && user?.approvalStatus === 'PendingApproval' && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6 p-4 rounded-2xl bg-[#FFD000]/10 border border-[#FFD000]/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-black/40"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FFD000]/20 flex items-center justify-center text-[#FFD000] flex-shrink-0">
-                <Clock className="w-5 h-5 animate-pulse" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-black uppercase tracking-wider text-[#FFD000]">
-                    Prosumer Verification In Progress
-                  </span>
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#FFD000] animate-ping" />
-                </div>
-                <p className="text-xs text-slate-300 mt-0.5">
-                  Your Prosumer account is awaiting operator authorization. You have full live access to the energy reservation queue and grid telemetry below.
-                </p>
-              </div>
-            </div>
-            <span className="self-start sm:self-auto px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-[#FFD000]/20 text-[#FFD000] border border-[#FFD000]/30 whitespace-nowrap">
-              Awaiting Review
-            </span>
-          </motion.div>
-        )}
 
         <section className="operations-hero">
           <div className="operations-heading">

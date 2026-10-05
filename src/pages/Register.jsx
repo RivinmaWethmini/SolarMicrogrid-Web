@@ -25,7 +25,7 @@ import solisFacilityImg from '../assets/images/solis-facility.jpg';
 
 const ROLES = [
   { id: 'Prosumer', label: 'Prosumer', icon: Sun },
-  { id: 'Admin', label: 'Operator', icon: ShieldCheck },
+  { id: 'GridOperator', label: 'Operator', icon: ShieldCheck },
   { id: 'Consumer', label: 'Consumer', icon: Users },
 ];
 
@@ -182,17 +182,23 @@ export default function Register() {
         deviceInfo: `Web (${fullName || username})`,
       });
 
-      loginWithAuthResponse(authResponse);
+      const userRole = (authResponse.user?.role || '').toLowerCase();
+      const requiresApproval =
+        authResponse.user?.approvalStatus === 'PendingApproval' &&
+        (userRole === 'gridoperator' || userRole === 'operator' || userRole === 'prosumer');
 
-      if (authResponse.user?.approvalStatus === 'PendingApproval') {
+      if (requiresApproval) {
+        const isProsumer = userRole === 'prosumer';
         toast.success(
-          'Registration complete! Prosumer accounts require operator approval before trading.',
-          { duration: 6000, icon: '⏳' }
+          `${isProsumer ? 'Prosumer' : 'Operator'} account registration submitted! An Administrator must verify and approve your account before you can sign in.`,
+          { duration: 8000, icon: '🛡️' }
         );
-      } else {
-        toast.success(`Welcome to SolarRays Microgrid, ${fullName || username}!`);
+        navigate('/login', { replace: true });
+        return;
       }
 
+      loginWithAuthResponse(authResponse);
+      toast.success(`Welcome to SolarRays Microgrid, ${fullName || username}!`);
       navigate('/reservations', { replace: true });
     } catch (err) {
       const msg = err.response?.data?.message || 'Verification failed. Please check the code.';
@@ -283,7 +289,13 @@ export default function Register() {
 
             {/* Step 1 Form */}
             {step === 1 && (
-              <form onSubmit={handleInitiateRegistration} className="space-y-4">
+              <form onSubmit={handleInitiateRegistration} className="space-y-4" autoComplete="off">
+                {/* Hidden decoy fields to divert aggressive browser password autofill */}
+                <div style={{ position: 'absolute', opacity: 0, height: 0, width: 0, zIndex: -1, pointerEvents: 'none' }} aria-hidden="true">
+                  <input type="text" name="fake_username_prevent_autofill" tabIndex={-1} autoComplete="off" />
+                  <input type="password" name="fake_password_prevent_autofill" tabIndex={-1} autoComplete="new-password" />
+                </div>
+
                 {/* Role Pill Selector */}
                 <div>
                   <label className="block text-xs font-medium text-[#92988d] mb-1.5">
@@ -322,6 +334,8 @@ export default function Register() {
                       <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                       <input
                         type="text"
+                        name="fullName"
+                        autoComplete="off"
                         required
                         placeholder="Your name"
                         value={fullName}
@@ -339,6 +353,8 @@ export default function Register() {
                       <FileBadge className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                       <input
                         type="text"
+                        name="nic"
+                        autoComplete="off"
                         required
                         placeholder="National ID"
                         value={nic}
@@ -359,6 +375,8 @@ export default function Register() {
                       <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                       <input
                         type="email"
+                        name="email"
+                        autoComplete="off"
                         required
                         placeholder="name@example.com"
                         value={email}
@@ -376,6 +394,10 @@ export default function Register() {
                       <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                       <input
                         type="text"
+                        name="registerUsername"
+                        id="registerUsername"
+                        autoComplete="off"
+                        spellCheck={false}
                         required
                         placeholder="username"
                         value={username}
@@ -396,6 +418,9 @@ export default function Register() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                       <input
                         type={showPassword ? 'text' : 'password'}
+                        name="registerPassword"
+                        id="registerPassword"
+                        autoComplete="new-password"
                         required
                         placeholder="At least 6 chars"
                         value={password}
@@ -420,6 +445,9 @@ export default function Register() {
                       <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#666c63]" />
                       <input
                         type={showConfirmPassword ? 'text' : 'password'}
+                        name="confirmPassword"
+                        id="confirmPassword"
+                        autoComplete="new-password"
                         required
                         placeholder="Re-enter password"
                         value={confirmPassword}
