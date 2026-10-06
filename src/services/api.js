@@ -15,6 +15,21 @@ export const TOKEN_KEYS = {
   LEGACY_TOKEN: 'token', // Backwards compatibility for existing components
 };
 
+// Purge obsolete hardcoded mock tokens from previous builds
+if (typeof window !== 'undefined' && window.localStorage) {
+  const token = localStorage.getItem(TOKEN_KEYS.ACCESS) || localStorage.getItem(TOKEN_KEYS.LEGACY_TOKEN);
+  const storedUser = localStorage.getItem(TOKEN_KEYS.USER);
+  if (
+    (token && (token.startsWith('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI2YWI2YjExMDVjNGIyN2I1OTc2YmE2ZWEi') || token.includes('6ab6b1105c4b27b5976ba6ea'))) ||
+    (storedUser && storedUser.includes('6ab6b1105c4b27b5976ba6ea'))
+  ) {
+    localStorage.removeItem(TOKEN_KEYS.ACCESS);
+    localStorage.removeItem(TOKEN_KEYS.LEGACY_TOKEN);
+    localStorage.removeItem(TOKEN_KEYS.REFRESH);
+    localStorage.removeItem(TOKEN_KEYS.USER);
+  }
+}
+
 // Retrieve short-lived JWT Access Token (15-minute validity)
 export const getAccessToken = () =>
   localStorage.getItem(TOKEN_KEYS.ACCESS) || localStorage.getItem(TOKEN_KEYS.LEGACY_TOKEN) || null;
@@ -29,7 +44,7 @@ export const getStoredUser = () => {
     const raw = localStorage.getItem(TOKEN_KEYS.USER);
     if (raw) return JSON.parse(raw);
   } catch {
-    // Ignore invalid JSON in localStorage
+    // Ignore invalid JSON in localStorage / treat corrupted session as logged out
   }
   return null;
 };

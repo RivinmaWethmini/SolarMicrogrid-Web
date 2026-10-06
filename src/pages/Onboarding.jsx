@@ -33,15 +33,17 @@ const SLIDES = [
 // If a user is already authenticated with valid credentials, it automatically redirects them into the portal.
 export default function Onboarding() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  // 1. If user already has an active session, skip onboarding and route to reservations
+  // 1. If user already has an active session, skip onboarding and route to the role-specific dashboard
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/reservations', { replace: true });
+      const role = (user?.role || '').toLowerCase();
+      const dashboard = role === 'admin' || role === 'backoffice' ? '/backoffice' : '/reservations';
+      navigate(dashboard, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Keyboard navigation support
   useEffect(() => {

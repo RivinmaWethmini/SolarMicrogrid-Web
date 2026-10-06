@@ -106,7 +106,7 @@ function App() {
           <Route path="/admin/*" element={<Navigate to="/backoffice" replace />} />
 
           {/* Wildcard Fallback */}
-          <Route path="*" element={<Navigate to="/reservations" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </AuthProvider>
