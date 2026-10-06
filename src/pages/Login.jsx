@@ -19,17 +19,19 @@ import { useAuth } from '../context/AuthContext';
 import solisFacilityImg from '../assets/images/solis-facility.jpg';
 
 export default function Login() {
-  const { loginWithAuthResponse, isAuthenticated } = useAuth();
+  const { loginWithAuthResponse, isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
-  // If already authenticated, redirect to reservations
+  // If already authenticated, redirect to the role-specific dashboard
   useEffect(() => {
     if (isAuthenticated) {
-      const destination = location.state?.from?.pathname || '/reservations';
+      const role = (user?.role || '').toLowerCase();
+      const dashboard = role === 'admin' || role === 'backoffice' ? '/backoffice' : '/reservations';
+      const destination = location.state?.from?.pathname || dashboard;
       navigate(destination, { replace: true });
     }
-  }, [isAuthenticated, navigate, location]);
+  }, [isAuthenticated, user, navigate, location]);
 
   // Auth Mode: 'password' | 'otp'
   const [authMode, setAuthMode] = useState('password');

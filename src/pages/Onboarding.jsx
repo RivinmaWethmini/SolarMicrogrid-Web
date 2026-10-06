@@ -31,15 +31,17 @@ const SLIDES = [
 
 export default function Onboarding() {
   const [currentSlide, setCurrentSlide] = useState(0);
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect to reservations if already logged in
+  // Already logged in: skip onboarding and open the role-specific dashboard
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/reservations', { replace: true });
+      const role = (user?.role || '').toLowerCase();
+      const dashboard = role === 'admin' || role === 'backoffice' ? '/backoffice' : '/reservations';
+      navigate(dashboard, { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, navigate]);
 
   // Keyboard navigation support
   useEffect(() => {
